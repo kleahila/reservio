@@ -1,64 +1,52 @@
 # Reservio
 
-Reservio is a full-featured web-based **hotel booking and management system** designed to simplify the reservation process for guests while providing efficient management tools for hotel staff and administrators. The system offers structured workflows, role-based access control, and real-time booking management to improve operational efficiency and user experience.
+## Overview 🚀
 
-The platform allows guests to browse available rooms, check availability, and make reservations, while hotel staff can manage bookings, oversee room status, and handle daily hotel operations. Administrators have full control over the system, including managing rooms, staff accounts, and monitoring reservations.
+Reservio is a cloud-based, multi-tenant SaaS hotel management platform built as a browser-first web application. It enables multiple hotels to operate on the same system while keeping tenant data isolated, supporting end-to-end hotel workflows for guests and staff.
 
----
+Designed with a responsive, mobile-first interface, Reservio combines operational management with a self-service guest experience through real-time updates, RBAC, and stateless JWT authentication.
 
-# User Roles
+## Features ✨
 
-Reservio supports three levels of users:
-
-## 1️⃣ Administrator
-
-- Manage system users and staff accounts
-- Add, edit, or remove hotel rooms
-- Configure room types and pricing
-- Monitor all reservations in the system
-- View system statistics and reports
-
----
-
-## 2️⃣ Hotel Staff
-
-- Manage guest reservations
-- Confirm bookings
-- Handle **check-in and check-out processes**
-- Update room availability and status
-- View reservation schedules
-
----
-
-## 3️⃣ Guest
-
-- Create and manage a personal account
-- Browse available rooms
-- View room details and pricing
-- Make reservations
-- View booking history and reservation details
-
----
-
-# Features
-
-- Role-Based Access Control (Guest / Staff / Admin)
+- Multi-tenant architecture with tenant-based data isolation
+- Role-Based Access Control (RBAC) for secure role separation
+- Real-time operational updates using WebSockets
 - Room browsing and availability checking
-- Online reservation system
-- Booking management dashboard
-- Room and pricing management
-- Reservation history tracking
-- Secure authentication and authorization
-- Responsive web interface
+- Reservation and booking workflows
+- Check-in and check-out management
+- Room status and occupancy management
+- Housekeeping task prioritization
+- Admin dashboards and tenant (hotel) management
 
----
+## User Roles 👥
 
-# Worked by
+1. **Guest**
+   - Browse rooms, check availability, and create/manage reservations
+2. **Receptionist / Staff**
+   - Handle bookings, check-in/check-out, and front-desk operations
+3. **Housekeeper**
+   - Track room cleaning priorities and update housekeeping status
+4. **Hotel Administrator**
+   - Manage rooms, staff, dashboards, and hotel-level configuration
+5. **Super Administrator**
+   - Manage tenants (hotels), platform-level controls, and global oversight
 
-- Eleana Zharkalli
-- Ina Ndoni
-- Joni Begaj
-- Jorida Vrusho
-- Klea Hila
-- Licern Beqiri
-- Orest Paja
+## Tech Stack 🛠️
+
+| Layer          | Technology       |
+| -------------- | ---------------- |
+| Frontend       | React, Vite      |
+| Backend        | Node.js, Express |
+| Database       | PostgreSQL       |
+| ORM            | Prisma           |
+| Realtime       | Socket.io        |
+| Authentication | JWT              |
+| Deployment     | Railway          |
+| CI/CD          | GitHub Actions   |
+
+## Team
+
+- **Backend:** Orest Paja, Licern Beqiri, Jorida Vrusho
+- **Frontend:** Eleana Zharkalli, Ina Ndoni
+- **System Modeling & Diagrams:** Joni Begaj
+- **CI/CD, Deployment, Testing, Documentation:** Klea Hila
