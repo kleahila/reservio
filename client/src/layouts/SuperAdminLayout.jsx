@@ -16,6 +16,8 @@ function SuperAdminLayout() {
             { to: "/superadmin/analytics", label: "Analytics" },
             { to: "/superadmin/onboard", label: "Onboard" },
             { to: "/superadmin/plans", label: "Plans" },
+            { to: "/staff/dashboard", label: "Staff Dashboard" },
+            { to: "/staff/housekeeping", label: "Housekeeping" },
           ]}
         />
         <main className="flex-1 p-8">
