@@ -1,21 +1,22 @@
 import { Outlet } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 
 function StaffLayout() {
   return (
-    <div className="min-h-screen bg-brand-light">
-      <Navbar title="Reservio Staff" />
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-300 bg-brand-primary px-6 py-3 text-sm font-semibold text-white">
+        staff.reservio.com
+      </header>
       <div className="flex">
         <Sidebar
+          dark
           title="Staff"
           sections={[
-            { to: "/staff/reservations", label: "Reservations" },
-            { to: "/staff/rooms", label: "Room Status" },
+            { to: "/staff/dashboard", label: "Dashboard" },
             { to: "/staff/housekeeping", label: "Housekeeping" },
           ]}
         />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-8">
           <Outlet />
         </main>
       </div>
