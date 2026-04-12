@@ -1,124 +1,91 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Card from "../../components/Card";
-import Button from "../../components/Button";
 import StatusBadge from "../../components/StatusBadge";
-import Badge from "../../components/Badge";
-import { rooms } from "../../data/rooms";
+import { mockRooms } from "../../data/mockRooms";
 
-function RoomBrowsing() {
-  const [roomList] = useState(rooms);
-  const [selectedFilter, setSelectedFilter] = useState("all");
+const STATUSES = ["All", "Available", "Occupied", "Maintenance"];
 
-  const filteredRooms =
-    selectedFilter === "all"
-      ? roomList
-      : roomList.filter((room) => room.status === selectedFilter);
+export default function RoomBrowsing() {
+  const [filter, setFilter] = useState("All");
 
-  const roomTypes = ["all", ...new Set(roomList.map((r) => r.type))];
-  const statusTypes = ["all", ...new Set(roomList.map((r) => r.status))];
+  const rooms = filter === "All" ? mockRooms : mockRooms.filter((r) => r.status === filter);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <h1 className="text-3xl font-bold text-brand-primary">Browse Rooms</h1>
-        <p className="mt-1 text-slate-600">
-          Find the perfect room for your stay. {roomList.length} rooms available.
-        </p>
-      </Card>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-rv-text">Browse Rooms</h1>
+        <p className="mt-1 text-rv-muted">{mockRooms.length} rooms available across all categories.</p>
+      </div>
 
       {/* Filters */}
-      <Card title="Filter by Availability">
-        <div className="flex flex-wrap gap-2">
-          {statusTypes.map((status) => (
-            <button
-              key={status}
-              onClick={() => setSelectedFilter(status)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedFilter === status
-                  ? "bg-brand-primary text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              {status === "all" ? "All Rooms" : status}
-            </button>
-          ))}
+      <div className="flex flex-wrap gap-2">
+        {STATUSES.map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              filter === s
+                ? "bg-rv-accent text-white"
+                : "border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text"
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+        <Link
+          to="/rooms/availability"
+          className="ml-auto rounded-full border border-rv-border2 bg-rv-surface px-4 py-1.5 text-sm font-medium text-rv-muted transition hover:text-rv-text"
+        >
+          Check availability
+        </Link>
+      </div>
+
+      {rooms.length === 0 ? (
+        <div className="rounded-xl border border-rv-border bg-rv-surface p-12 text-center text-rv-muted">
+          No rooms match this filter.
         </div>
-      </Card>
-
-      {/* Room Grid */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">
-          {selectedFilter === "all"
-            ? "All Rooms"
-            : `${selectedFilter} Rooms (${filteredRooms.length})`}
-        </h2>
-        {filteredRooms.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredRooms.map((room) => (
-              <div
-                key={room.id}
-                className="flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow transition hover:shadow-lg"
-              >
-                {/* Photo Placeholder */}
-                <div className="relative h-48 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <span className="text-6xl">🛏️</span>
-                  <Badge className="absolute top-3 right-3 bg-green-500 text-white font-bold text-sm px-3 py-1">
-                    ${room.pricePerNight}/night
-                  </Badge>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              className="flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm transition hover:border-rv-border2 hover:shadow-md"
+            >
+              <img
+                src={room.photos[0]}
+                alt={room.type}
+                className="h-44 w-full object-cover"
+              />
+              <div className="flex flex-1 flex-col p-4">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-rv-text">{room.type}</h3>
+                  <StatusBadge status={room.status} />
                 </div>
-
-                {/* Content */}
-                <div className="flex flex-1 flex-col p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-slate-900 flex-1">
-                      {room.type}
-                    </h3>
-                    <StatusBadge status={room.status} />
-                  </div>
-
-                  <p className="text-sm text-slate-600 flex-1">
-                    {room.description}
-                  </p>
-
-                  {/* Features */}
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600 border-t border-slate-100 pt-3">
-                    <div className="text-center">
-                      <span className="text-lg">🛏️</span>
-                      <p>Bed</p>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-lg">🚿</span>
-                      <p>Bath</p>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-lg">📺</span>
-                      <p>TV</p>
-                    </div>
-                  </div>
-
-                  {/* Button */}
-                  <Link to={`/guest/rooms/${room.id}`} className="mt-4">
-                    <Button className="w-full" variant={room.status === 'Available' ? 'primary' : 'secondary'}>
-                      {room.status === "Available" ? "View Details" : "View Details"}
-                    </Button>
+                <p className="mb-4 flex-1 text-sm leading-relaxed text-rv-muted line-clamp-2">
+                  {room.description}
+                </p>
+                <div className="flex items-center justify-between border-t border-rv-border pt-3">
+                  <span className="text-sm font-bold text-rv-text">
+                    ${room.pricePerNight}
+                    <span className="text-xs font-normal text-rv-muted">/night</span>
+                  </span>
+                  <Link
+                    to={`/reservation/${room.id}`}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      room.status === "Available"
+                        ? "bg-rv-accent text-white hover:bg-rv-accent/90"
+                        : "cursor-not-allowed bg-rv-surface2 text-rv-muted"
+                    }`}
+                    onClick={room.status !== "Available" ? (e) => e.preventDefault() : undefined}
+                  >
+                    {room.status === "Available" ? "Reserve" : "Unavailable"}
                   </Link>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-            <p className="text-lg text-slate-600">No rooms found</p>
-            <p className="text-sm text-slate-500 mt-1">
-              Try adjusting your filters
-            </p>
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-export default RoomBrowsing;

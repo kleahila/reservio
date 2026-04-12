@@ -1,169 +1,93 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Card from "../../components/Card";
-import Button from "../../components/Button";
-import Toast from "../../components/Toast";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
-function Login() {
+const input = (err) =>
+  `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-surface text-rv-text placeholder:text-rv-subtle outline-none transition focus:ring-2 focus:ring-rv-accent/40 ${
+    err ? "border-rv-danger" : "border-rv-border2"
+  }`;
+
+export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState("anna@example.com");
   const [password, setPassword] = useState("demo123");
   const [errors, setErrors] = useState({});
-  const [toast, setToast] = useState({ message: "", type: "info" });
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (field, value) => {
-    if (field === "email") setEmail(value);
-    else setPassword(value);
+  function handleSubmit(e) {
+    e.preventDefault();
+    const errs = {};
+    if (!email.trim()) errs.email = "Email is required.";
+    if (!password.trim()) errs.password = "Password is required.";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
-    // Clear errors when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  const handleLogin = () => {
-    // Reset errors
-    const newErrors = {};
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required";
-    }
-
-    if (!password.trim()) {
-      newErrors.password = "Password is required";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setToast({
-        message: "Please fill in all fields",
-        type: "error",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Simulate API call
+    setLoading(true);
     setTimeout(() => {
       const ok = login(email, password);
-
+      setLoading(false);
       if (ok) {
-        setToast({
-          message: "Logged in successfully!",
-          type: "success",
-        });
-        setIsLoading(false);
-
-        // Redirect to dashboard after success
-        setTimeout(() => {
-          navigate("/guest/dashboard");
-        }, 1500);
+        navigate("/guest/dashboard");
       } else {
-        setToast({
-          message: "Invalid email or password",
-          type: "error",
-        });
-        setErrors({
-          email: "Invalid credentials",
-          password: "Invalid credentials",
-        });
-        setIsLoading(false);
+        setErrors({ email: "Invalid credentials.", password: "Invalid credentials." });
       }
-    }, 800);
-  };
-
-  const handleKeyPress = (event) => {
-    if (event.key === "Enter") {
-      handleLogin();
-    }
-  };
+    }, 600);
+  }
 
   return (
-    <>
-      <Card title="Guest Login" className="max-w-md mx-auto">
-        <div className="space-y-4">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => handleChange("email", event.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-              className={`w-full rounded border px-3 py-2 outline-none transition focus:border-brand-accent disabled:bg-slate-100 ${
-                errors.email
-                  ? "border-red-500 focus:border-red-500"
-                  : "border-slate-300"
-              }`}
-              placeholder="your@email.com"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
-          </div>
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-rv-text">Sign in</h1>
+          <p className="mt-1 text-sm text-rv-muted">Welcome back to Reservio.</p>
+        </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => handleChange("password", event.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-              className={`w-full rounded border px-3 py-2 outline-none transition focus:border-brand-accent disabled:bg-slate-100 ${
-                errors.password
-                  ? "border-red-500 focus:border-red-500"
-                  : "border-slate-300"
-              }`}
-              placeholder="••••••"
-            />
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-            )}
-          </div>
+        <div className="rounded-2xl border border-rv-border bg-rv-surface p-8 shadow-sm">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-rv-text">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((x) => ({ ...x, email: "" })); }}
+                disabled={loading}
+                className={input(errors.email)}
+              />
+              {errors.email && <p className="mt-1 text-xs text-rv-danger">{errors.email}</p>}
+            </div>
 
-          {/* Demo Hint */}
-          <div className="rounded-md bg-blue-50 p-3 text-xs text-slate-600">
-            <p className="font-medium">Demo credentials:</p>
-            <p>Email: anna@example.com</p>
-            <p>Password: demo123</p>
-          </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-rv-text">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((x) => ({ ...x, password: "" })); }}
+                disabled={loading}
+                className={input(errors.password)}
+              />
+              {errors.password && <p className="mt-1 text-xs text-rv-danger">{errors.password}</p>}
+            </div>
 
-          {/* Login Button */}
-          <Button onClick={handleLogin} disabled={isLoading} className="w-full">
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
+            <div className="rounded-lg border border-rv-border bg-rv-surface2 px-4 py-3 text-xs text-rv-muted">
+              <span className="font-semibold text-rv-text">Demo:</span> anna@example.com / demo123
+            </div>
 
-          {/* Register Link */}
-          <p className="text-center text-sm text-slate-600">
-            Don't have an account?{" "}
-            <a
-              href="/guest/register"
-              className="font-medium text-brand-primary hover:text-brand-accent"
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-rv-accent py-2.5 text-sm font-semibold text-white transition hover:bg-rv-accent/90 disabled:opacity-50"
             >
-              Create one
-            </a>
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-xs text-rv-muted">
+            No account?{" "}
+            <Link to="/register" className="font-medium text-rv-accent hover:underline">Create one</Link>
           </p>
         </div>
-      </Card>
-
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ message: "", type: "info" })}
-      />
-    </>
+      </div>
+    </div>
   );
 }
-
-export default Login;

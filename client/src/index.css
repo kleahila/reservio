@@ -1,3 +1,80 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Reservio design tokens ─────────────────────────────────────────────── */
+
+:root {
+  /* Flat colors (used directly, no opacity modifier needed) */
+  --rv-bg:           #f7f5f2;
+  --rv-surface:      #ffffff;
+  --rv-surface2:     #f2f0ec;
+  --rv-border:       rgba(0, 0, 0, 0.07);
+  --rv-border2:      rgba(0, 0, 0, 0.11);
+  --rv-accent-soft:  rgba(44, 82, 130, 0.08);
+  --rv-success-soft: rgba(39, 103, 73, 0.08);
+  --rv-warning-soft: rgba(146, 64, 14, 0.08);
+  --rv-danger-soft:  rgba(155, 44, 44, 0.07);
+
+  /* RGB channel tokens (supports Tailwind /opacity modifier, e.g. text-rv-accent/50) */
+  --rv-accent:   44 82 130;
+  --rv-text:     26 26 26;
+  --rv-muted:    107 107 107;
+  --rv-subtle:   154 154 154;
+  --rv-success:  39 103 73;
+  --rv-warning:  146 64 14;
+  --rv-danger:   155 44 44;
+}
+
+.dark {
+  --rv-bg:           #0f1623;
+  --rv-surface:      #1a2236;
+  --rv-surface2:     #1e2a40;
+  --rv-border:       rgba(255, 255, 255, 0.08);
+  --rv-border2:      rgba(255, 255, 255, 0.13);
+  --rv-accent-soft:  rgba(79, 126, 248, 0.12);
+  --rv-success-soft: rgba(110, 231, 183, 0.10);
+  --rv-warning-soft: rgba(251, 191, 36, 0.10);
+  --rv-danger-soft:  rgba(248, 113, 113, 0.10);
+
+  --rv-accent:   79 126 248;
+  --rv-text:     232 237 245;
+  --rv-muted:    122 138 170;
+  --rv-subtle:   74 85 104;
+  --rv-success:  110 231 183;
+  --rv-warning:  251 191 36;
+  --rv-danger:   248 113 113;
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────── */
+
+body {
+  background-color: var(--rv-bg);
+  color: rgb(var(--rv-text));
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* ─── Thin scrollbar ─────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--rv-border2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--rv-muted) / 0.4);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rv-border2) transparent;
+}

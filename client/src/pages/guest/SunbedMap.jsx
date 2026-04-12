@@ -1,310 +1,103 @@
-import { useState, useEffect } from "react";
-import Card from "../../components/Card";
-import Button from "../../components/Button";
-import Modal from "../../components/Modal";
-import Toast from "../../components/Toast";
-import Badge from "../../components/Badge";
-import { sunbeds } from "../../data/sunbeds";
+import { useState } from "react";
+import StatusBadge from "../../components/StatusBadge";
+import { mockSunbeds } from "../../data/mockSunbeds";
 
-function SunbedMap() {
-  const [sunbedList, setSunbedList] = useState(sunbeds);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState("09:00-12:00");
-  const [selectedSunbed, setSelectedSunbed] = useState(null);
-  const [lockedSunbed, setLockedSunbed] = useState(null);
-  const [countdown, setCountdown] = useState(300); // 5 minutes
-  const [toast, setToast] = useState({ message: "", type: "info" });
+const ZONES = ["All", "Poolside", "Beach", "Terrace"];
 
-  const timeSlots = [
-    "09:00-12:00",
-    "12:00-15:00",
-    "15:00-18:00",
-    "18:00-21:00",
-  ];
+export default function SunbedMap() {
+  const [sunbeds, setSunbeds] = useState(mockSunbeds);
+  const [zone, setZone] = useState("All");
+  const [selected, setSelected] = useState(null);
+  const [confirmed, setConfirmed] = useState(null);
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (!lockedSunbed) return;
+  const visible = zone === "All" ? sunbeds : sunbeds.filter((s) => s.zone === zone);
 
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          setLockedSunbed(null);
-          setToast({
-            message: `Sunbed ${lockedSunbed?.label} reservation expired`,
-            type: "info",
-          });
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lockedSunbed]);
-
-  const formatCountdown = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const getSunbedsBySlot = (slot) => {
-    return sunbedList.filter(
-      (bed) => bed.timeSlot === slot || bed.status === "available",
-    );
-  };
-
-  const getSunbedColor = (sunbed) => {
-    if (lockedSunbed?.id === sunbed.id) {
-      return "bg-yellow-100 border-yellow-400 text-yellow-900";
-    }
-    if (sunbed.status === "available") {
-      return "bg-green-100 border-green-400 text-green-900";
-    }
-    return "bg-red-100 border-red-400 text-red-900";
-  };
-
-  const handleSunbedClick = (sunbed) => {
-    if (lockedSunbed?.id === sunbed.id) {
-      setSelectedSunbed(sunbed);
-      return;
-    }
-
-    if (sunbed.status !== "available") {
-      setToast({
-        message: `Sunbed ${sunbed.label} is already booked for this time`,
-        type: "error",
-      });
-      return;
-    }
-
-    setSelectedSunbed(sunbed);
-  };
-
-  const handleReserveSunbed = () => {
-    if (!selectedSunbed) return;
-
-    setLockedSunbed({ ...selectedSunbed, timeSlot: selectedTimeSlot });
-    setCountdown(300);
-    setToast({
-      message: `Sunbed ${selectedSunbed.label} reserved for 5 minutes! Confirm quickly.`,
-      type: "success",
-    });
-    setSelectedSunbed(null);
-  };
-
-  const handleCancelLock = () => {
-    setToast({
-      message: `Reservation for sunbed ${lockedSunbed?.label} cancelled`,
-      type: "info",
-    });
-    setLockedSunbed(null);
-    setCountdown(300);
-  };
-
-  const handleConfirmBooking = () => {
-    if (!lockedSunbed) return;
-
-    setToast({
-      message: `Sunbed ${lockedSunbed.label} booked for ${lockedSunbed.timeSlot}! Reference: SUN-${Date.now()}`,
-      type: "success",
-    });
-    setLockedSunbed(null);
-    setCountdown(300);
-  };
-
-  const groupedSunbeds = sunbedList.reduce((acc, bed) => {
-    const zone = bed.zone || "General";
-    if (!acc[zone]) acc[zone] = [];
-    acc[zone].push(bed);
-    return acc;
-  }, {});
+  function handleReserve() {
+    if (!selected) return;
+    setSunbeds((p) => p.map((s) => s.id === selected.id ? { ...s, status: "Reserved" } : s));
+    setConfirmed(selected);
+    setSelected(null);
+  }
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <Card>
-          <h1 className="text-3xl font-bold text-brand-primary">Sunbed Map ☀️</h1>
-          <p className="mt-2 text-slate-600">
-            Reserve a sunbed at your preferred time slot. Sunbeds are held for 5 minutes.
-          </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-rv-text">Sunbeds</h1>
+        <p className="mt-1 text-rv-muted">Reserve a sunbed in your favourite zone.</p>
+      </div>
 
-          {/* Legend */}
-          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-green-100 border border-green-400"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-red-100 border border-red-400"></div>
-              <span>Booked</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-yellow-100 border border-yellow-400"></div>
-              <span>Reserved</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Time Slot Selection */}
-        <Card title="Select Time Slot">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {timeSlots.map((slot) => (
-              <button
-                key={slot}
-                onClick={() => setSelectedTimeSlot(slot)}
-                className={`rounded-lg border-2 p-3 font-medium transition ${
-                  selectedTimeSlot === slot
-                    ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                {slot}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* Sunbed Zones */}
-        {Object.entries(groupedSunbeds).map(([zone, zoneSunbeds]) => (
-          <Card key={zone} title={`${zone} Zone - ${selectedTimeSlot}`}>
-            <div className="grid gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {zoneSunbeds.map((sunbed) => (
-                <button
-                  key={sunbed.id}
-                  onClick={() => handleSunbedClick(sunbed)}
-                  disabled={
-                    lockedSunbed?.id !== sunbed.id && sunbed.status !== "available"
-                  }
-                  className={`relative p-3 rounded border-2 text-center font-semibold transition ${getSunbedColor(sunbed)} ${
-                    selectedSunbed?.id === sunbed.id
-                      ? "ring-2 ring-blue-500 shadow-md"
-                      : ""
-                  } ${
-                    lockedSunbed?.id !== sunbed.id && sunbed.status !== "available"
-                      ? "cursor-not-allowed opacity-60"
-                      : "hover:shadow-md cursor-pointer"
-                  }`}
-                >
-                  <span className="text-lg">{sunbed.label}</span>
-                  {lockedSunbed?.id === sunbed.id && (
-                    <Badge className="absolute top-1 right-1 bg-yellow-500 text-white text-xs">
-                      {formatCountdown(countdown)}
-                    </Badge>
-                  )}
-                </button>
-              ))}
-            </div>
-          </Card>
+      {/* Zone filter */}
+      <div className="flex flex-wrap gap-2">
+        {ZONES.map((z) => (
+          <button
+            key={z}
+            onClick={() => setZone(z)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              zone === z
+                ? "bg-rv-accent text-white"
+                : "border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text"
+            }`}
+          >
+            {z}
+          </button>
         ))}
       </div>
 
-      {/* Sunbed Detail Modal */}
-      <Modal
-        isOpen={selectedSunbed !== null}
-        onClose={() => setSelectedSunbed(null)}
-        title={`Reserve Sunbed ${selectedSunbed?.label}`}
-      >
-        <div className="space-y-4">
-          <div className="rounded-lg bg-slate-50 p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Sunbed Label</span>
-              <span className="font-semibold">{selectedSunbed?.label}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Zone</span>
-              <span className="font-semibold">{selectedSunbed?.zone}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Time Slot</span>
-              <span className="font-semibold">{selectedTimeSlot}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2">
-              <span className="text-slate-600">Price</span>
-              <span className="text-lg font-bold text-brand-primary">
-                $15
-              </span>
+      {confirmed && (
+        <div className="rounded-xl border border-rv-success/30 bg-rv-success-soft px-5 py-4">
+          <p className="font-semibold text-rv-success">
+            Sunbed <strong>{confirmed.label}</strong> in {confirmed.zone} reserved.
+          </p>
+          <button onClick={() => setConfirmed(null)} className="mt-1 text-xs text-rv-success/70 hover:text-rv-success">Dismiss</button>
+        </div>
+      )}
+
+      {/* Grouped by zone */}
+      {ZONES.filter((z) => z !== "All" && (zone === "All" || zone === z)).map((z) => {
+        const group = visible.filter((s) => s.zone === z);
+        if (group.length === 0) return null;
+        return (
+          <div key={z}>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-rv-muted">{z}</h2>
+            <div className="grid grid-cols-5 gap-3 sm:grid-cols-8 lg:grid-cols-10">
+              {group.map((sunbed) => (
+                <button
+                  key={sunbed.id}
+                  onClick={() => sunbed.status === "Available" && setSelected(sunbed)}
+                  disabled={sunbed.status !== "Available"}
+                  className={`flex flex-col items-center justify-center rounded-xl border-2 p-3 transition ${
+                    sunbed.status === "Available"
+                      ? "border-rv-success/40 bg-rv-success-soft hover:border-rv-success/60 cursor-pointer"
+                      : "border-rv-warning/30 bg-rv-warning-soft cursor-not-allowed opacity-60"
+                  } ${selected?.id === sunbed.id ? "ring-2 ring-rv-accent ring-offset-1" : ""}`}
+                >
+                  <span className="text-sm font-bold text-rv-text">{sunbed.label}</span>
+                </button>
+              ))}
             </div>
           </div>
+        );
+      })}
 
-          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
-            ⏱️ Sunbed will be held for 5 minutes. Confirm your booking to proceed.
-          </div>
+      <div className="flex gap-3 text-xs">
+        <StatusBadge status="Available" />
+        <StatusBadge status="Reserved" />
+      </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => setSelectedSunbed(null)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleReserveSunbed}>
-              Reserve & Lock
-            </Button>
+      {selected && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rv-border bg-rv-surface p-4 shadow-xl md:static md:rounded-xl md:shadow-sm">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-rv-text">Sunbed {selected.label}</p>
+              <p className="text-sm text-rv-muted">{selected.zone}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setSelected(null)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
+              <button onClick={handleReserve} className="rounded-lg bg-rv-accent px-5 py-2 text-sm font-semibold text-white hover:bg-rv-accent/90">Reserve</button>
+            </div>
           </div>
         </div>
-      </Modal>
-
-      {/* Locked Sunbed Confirmation Modal */}
-      <Modal
-        isOpen={lockedSunbed !== null}
-        onClose={() => {}}
-        title={`Confirm Sunbed - ${lockedSunbed?.label}`}
-      >
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="text-6xl mb-2">⏰</div>
-            <p className="text-3xl font-bold text-brand-primary">
-              {formatCountdown(countdown)}
-            </p>
-            <p className="text-sm text-slate-600 mt-1">
-              Time remaining to confirm
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-slate-50 p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Sunbed</span>
-              <span className="font-semibold">{lockedSunbed?.label}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Zone</span>
-              <span className="font-semibold">{lockedSunbed?.zone}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Time Slot</span>
-              <span className="font-semibold">{lockedSunbed?.timeSlot}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2">
-              <span className="text-slate-600">Total Cost</span>
-              <span className="text-lg font-bold text-brand-primary">
-                $15
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
-              onClick={handleCancelLock}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmBooking}>
-              Confirm Booking
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ message: "", type: "info" })}
-      />
-    </>
+      )}
+    </div>
   );
 }
-
-export default SunbedMap;

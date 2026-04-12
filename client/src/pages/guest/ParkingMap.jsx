@@ -1,272 +1,96 @@
-import { useState, useEffect } from "react";
-import Card from "../../components/Card";
-import Button from "../../components/Button";
-import Modal from "../../components/Modal";
-import Toast from "../../components/Toast";
-import Badge from "../../components/Badge";
-import { parkingSpots } from "../../data/parkingSpots";
+import { useState } from "react";
+import StatusBadge from "../../components/StatusBadge";
+import { mockParking } from "../../data/mockParking";
 
-function ParkingMap() {
-  const [spots, setSpots] = useState(parkingSpots);
-  const [selectedSpot, setSelectedSpot] = useState(null);
-  const [lockedSpot, setLockedSpot] = useState(null);
-  const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
-  const [toast, setToast] = useState({ message: "", type: "info" });
+const CARD_CLS = {
+  Available:   "border-rv-success/40 bg-rv-success-soft hover:border-rv-success/60 cursor-pointer",
+  Occupied:    "border-rv-accent/30 bg-rv-accent-soft cursor-not-allowed opacity-60",
+  Maintenance: "border-rv-danger/30 bg-rv-danger-soft cursor-not-allowed opacity-60",
+  Reserved:    "border-rv-warning/30 bg-rv-warning-soft cursor-not-allowed opacity-60",
+};
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (!lockedSpot) return;
+export default function ParkingMap() {
+  const [spots, setSpots] = useState(mockParking);
+  const [selected, setSelected] = useState(null);
+  const [confirmed, setConfirmed] = useState(null);
 
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          setLockedSpot(null);
-          setToast({
-            message: `Parking spot ${lockedSpot?.label} reservation expired`,
-            type: "info",
-          });
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lockedSpot]);
-
-  const formatCountdown = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const stats = {
+    available:   spots.filter((s) => s.status === "Available").length,
+    occupied:    spots.filter((s) => s.status === "Occupied").length,
+    reserved:    spots.filter((s) => s.status === "Reserved").length,
+    maintenance: spots.filter((s) => s.status === "Maintenance").length,
   };
 
-  const getSpotColor = (spot) => {
-    if (lockedSpot?.id === spot.id) {
-      return "bg-yellow-100 border-yellow-400 text-yellow-900";
-    }
-    if (spot.status === "available") {
-      return "bg-green-100 border-green-400 text-green-900";
-    }
-    if (spot.status === "occupied") {
-      return "bg-red-100 border-red-400 text-red-900";
-    }
-    return "bg-gray-100 border-gray-400 text-gray-900";
-  };
-
-  const handleSpotClick = (spot) => {
-    if (lockedSpot?.id === spot.id) {
-      // Already locked by user
-      setSelectedSpot(spot);
-      return;
-    }
-
-    if (spot.status !== "available") {
-      setToast({
-        message: `Spot ${spot.label} is ${spot.status}`,
-        type: "error",
-      });
-      return;
-    }
-
-    setSelectedSpot(spot);
-  };
-
-  const handleReserveSpot = () => {
-    if (!selectedSpot) return;
-
-    setLockedSpot(selectedSpot);
-    setCountdown(300);
-    setToast({
-      message: `Spot ${selectedSpot.label} reserved for 5 minutes! Confirm quickly.`,
-      type: "success",
-    });
-    setSelectedSpot(null);
-  };
-
-  const handleCancelLock = () => {
-    setToast({
-      message: `Reservation for spot ${lockedSpot?.label} cancelled`,
-      type: "info",
-    });
-    setLockedSpot(null);
-    setCountdown(300);
-  };
-
-  const handleConfirmBooking = () => {
-    if (!lockedSpot) return;
-
-    setToast({
-      message: `Spot ${lockedSpot.label} booked successfully! Reference: PARK-${Date.now()}`,
-      type: "success",
-    });
-    setLockedSpot(null);
-    setCountdown(300);
-  };
-
-  const groupedSpots = spots.reduce((acc, spot) => {
-    const zone = spot.zone || "General";
-    if (!acc[zone]) acc[zone] = [];
-    acc[zone].push(spot);
-    return acc;
-  }, {});
+  function handleReserve() {
+    if (!selected) return;
+    setSpots((p) => p.map((s) => s.id === selected.id ? { ...s, status: "Reserved" } : s));
+    setConfirmed(selected);
+    setSelected(null);
+  }
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <Card>
-          <h1 className="text-3xl font-bold text-brand-primary">Parking Map 🚗</h1>
-          <p className="mt-2 text-slate-600">
-            Reserve a parking spot. Spots are held for 5 minutes.
-          </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-rv-text">Parking</h1>
+        <p className="mt-1 text-rv-muted">Tap an available spot to reserve it for your stay.</p>
+      </div>
 
-          {/* Legend */}
-          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-green-100 border border-green-400"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-red-100 border border-red-400"></div>
-              <span>Occupied</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-yellow-100 border border-yellow-400"></div>
-              <span>Reserved</span>
-            </div>
+      <div className="flex flex-wrap gap-3">
+        {Object.entries(stats).map(([label, count]) => (
+          <div key={label} className="rounded-lg border border-rv-border bg-rv-surface px-4 py-2 text-sm">
+            <span className="capitalize text-rv-muted">{label}</span>
+            <span className="ml-2 font-bold text-rv-text">{count}</span>
           </div>
-        </Card>
-
-        {/* Parking Zones */}
-        {Object.entries(groupedSpots).map(([zone, zoneSpots]) => (
-          <Card key={zone} title={`${zone} Zone`}>
-            <div className="grid gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {zoneSpots.map((spot) => (
-                <button
-                  key={spot.id}
-                  onClick={() => handleSpotClick(spot)}
-                  disabled={lockedSpot?.id !== spot.id && spot.status !== "available"}
-                  className={`relative p-3 rounded border-2 text-center font-semibold transition ${getSpotColor(spot)} ${
-                    selectedSpot?.id === spot.id
-                      ? "ring-2 ring-blue-500 shadow-md"
-                      : ""
-                  } ${
-                    lockedSpot?.id !== spot.id && spot.status !== "available"
-                      ? "cursor-not-allowed opacity-60"
-                      : "hover:shadow-md cursor-pointer"
-                  }`}
-                >
-                  <span className="text-lg">{spot.label}</span>
-                  {lockedSpot?.id === spot.id && (
-                    <Badge className="absolute top-1 right-1 bg-yellow-500 text-white text-xs">
-                      {formatCountdown(countdown)}
-                    </Badge>
-                  )}
-                  <p className="text-xs mt-1 opacity-75">${spot.pricePerNight}</p>
-                </button>
-              ))}
-            </div>
-          </Card>
         ))}
       </div>
 
-      {/* Spot Detail Modal */}
-      <Modal
-        isOpen={selectedSpot !== null}
-        onClose={() => setSelectedSpot(null)}
-        title={`Reserve Spot ${selectedSpot?.label}`}
-      >
-        <div className="space-y-4">
-          <div className="rounded-lg bg-slate-50 p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Spot Label</span>
-              <span className="font-semibold">{selectedSpot?.label}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Zone</span>
-              <span className="font-semibold">{selectedSpot?.zone}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2">
-              <span className="text-slate-600">Price Per Night</span>
-              <span className="text-lg font-bold text-brand-primary">
-                ${selectedSpot?.pricePerNight}
-              </span>
-            </div>
-          </div>
+      {confirmed && (
+        <div className="rounded-xl border border-rv-success/30 bg-rv-success-soft px-5 py-4">
+          <p className="font-semibold text-rv-success">
+            Spot <strong>{confirmed.label}</strong> reserved &mdash; ${confirmed.pricePerNight}/night.
+          </p>
+          <button onClick={() => setConfirmed(null)} className="mt-1 text-xs text-rv-success/70 hover:text-rv-success">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
-            ⏱️ Spot will be held for 5 minutes. Confirm your booking to proceed.
-          </div>
+      <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
+        {spots.map((spot) => (
+          <button
+            key={spot.id}
+            onClick={() => spot.status === "Available" && setSelected(spot)}
+            disabled={spot.status !== "Available"}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 p-3 text-center transition ${
+              CARD_CLS[spot.status] ?? ""
+            } ${selected?.id === spot.id ? "ring-2 ring-rv-accent ring-offset-1" : ""}`}
+          >
+            <span className="text-sm font-bold text-rv-text">{spot.label}</span>
+            <span className="text-xs text-rv-muted">${spot.pricePerNight}</span>
+          </button>
+        ))}
+      </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => setSelectedSpot(null)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleReserveSpot}>
-              Reserve & Lock
-            </Button>
+      <div className="flex flex-wrap gap-3 text-xs">
+        {["Available", "Occupied", "Reserved", "Maintenance"].map((s) => (
+          <StatusBadge key={s} status={s} />
+        ))}
+      </div>
+
+      {selected && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rv-border bg-rv-surface p-4 shadow-xl md:static md:rounded-xl md:shadow-sm">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-rv-text">Spot {selected.label}</p>
+              <p className="text-sm text-rv-muted">${selected.pricePerNight}/night</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setSelected(null)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
+              <button onClick={handleReserve} className="rounded-lg bg-rv-accent px-5 py-2 text-sm font-semibold text-white hover:bg-rv-accent/90">Reserve</button>
+            </div>
           </div>
         </div>
-      </Modal>
-
-      {/* Locked Spot Confirmation Modal */}
-      <Modal
-        isOpen={lockedSpot !== null}
-        onClose={() => {}}
-        title={`Confirm Parking - ${lockedSpot?.label}`}
-      >
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="text-6xl mb-2">⏰</div>
-            <p className="text-3xl font-bold text-brand-primary">
-              {formatCountdown(countdown)}
-            </p>
-            <p className="text-sm text-slate-600 mt-1">
-              Time remaining to confirm
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-slate-50 p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Spot</span>
-              <span className="font-semibold">{lockedSpot?.label}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Zone</span>
-              <span className="font-semibold">{lockedSpot?.zone}</span>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2">
-              <span className="text-slate-600">Total Cost</span>
-              <span className="text-lg font-bold text-brand-primary">
-                ${lockedSpot?.pricePerNight}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
-              onClick={handleCancelLock}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmBooking}>
-              Confirm Booking
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ message: "", type: "info" })}
-      />
-    </>
+      )}
+    </div>
   );
 }
-
-export default ParkingMap;

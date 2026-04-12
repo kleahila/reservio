@@ -1,119 +1,88 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import Card from "../../components/Card";
-import Button from "../../components/Button";
-import Badge from "../../components/Badge";
 import StatusBadge from "../../components/StatusBadge";
 import { useAuth } from "../../hooks/useAuth";
-import { reservations } from "../../data/reservations";
-import { formatDate } from "../../utils/validation";
+import { mockReservations } from "../../data/mockReservations";
+import { mockRooms } from "../../data/mockRooms";
 
-function Dashboard() {
+const QUICK_LINKS = [
+  { to: "/rooms",       label: "Browse Rooms" },
+  { to: "/parking",     label: "Parking" },
+  { to: "/sunbeds",     label: "Sunbeds" },
+  { to: "/marketplace", label: "Services" },
+  { to: "/notifications", label: "Notifications" },
+];
+
+export default function Dashboard() {
   const { currentUser } = useAuth();
-  const [upcomingReservations] = useState(
-    reservations
-      .filter((res) => res.status === "Confirmed")
-      .slice(0, 3),
-  );
+  const upcoming = mockReservations.filter((r) => r.status === "Confirmed" || r.status === "Pending").slice(0, 3);
 
-  const quickLinks = [
-    { to: "/guest/rooms", label: "Browse Rooms", icon: "🛏️" },
-    { to: "/guest/parking", label: "Parking", icon: "🚗" },
-    { to: "/guest/sunbeds", label: "Sunbeds", icon: "☀️" },
-    { to: "/guest/marketplace", label: "Marketplace", icon: "🛍️" },
-  ];
+  function roomName(id) {
+    return mockRooms.find((r) => r.id === id)?.type ?? `Room #${id}`;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-brand-primary">
-              Welcome back, {currentUser?.fullName || "Guest"}! 👋
-            </h1>
-            <p className="mt-1 text-slate-600">
-              {currentUser?.fullName || "Guest user"}, we're glad to have you here.
-            </p>
-          </div>
-        </div>
-      </Card>
+    <div className="space-y-8">
+      {/* Welcome */}
+      <div className="rounded-xl border border-rv-border bg-rv-surface p-6">
+        <h1 className="text-2xl font-bold text-rv-text">
+          Welcome back, {currentUser?.fullName?.split(" ")[0] ?? "Guest"}
+        </h1>
+        <p className="mt-1 text-sm text-rv-muted">
+          Here&apos;s an overview of your upcoming stays and hotel services.
+        </p>
+      </div>
 
-      {/* Quick Links */}
+      {/* Quick links */}
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-800">Quick Links</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {quickLinks.map((link) => (
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-rv-muted">Quick links</h2>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_LINKS.map(({ to, label }) => (
             <Link
-              key={link.to}
-              to={link.to}
-              className="flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-4 transition hover:border-brand-primary hover:shadow-md"
+              key={to}
+              to={to}
+              className="rounded-lg border border-rv-border2 bg-rv-surface px-4 py-2 text-sm font-medium text-rv-text transition hover:border-rv-accent/30 hover:bg-rv-accent-soft hover:text-rv-accent"
             >
-              <div className="text-3xl">{link.icon}</div>
-              <span className="font-medium text-slate-700 text-center">
-                {link.label}
-              </span>
+              {label}
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Upcoming Reservations */}
-      <Card title="Your Upcoming Reservations">
-        {upcomingReservations.length > 0 ? (
+      {/* Upcoming reservations */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-rv-text">Upcoming Reservations</h2>
+        {upcoming.length === 0 ? (
+          <div className="rounded-xl border border-rv-border bg-rv-surface p-8 text-center text-rv-muted">
+            No upcoming reservations.{" "}
+            <Link to="/rooms" className="text-rv-accent hover:underline">Browse rooms</Link>
+          </div>
+        ) : (
           <div className="space-y-3">
-            {upcomingReservations.map((reservation) => (
+            {upcoming.map((res) => (
               <div
-                key={reservation.id}
-                className="flex items-start justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
+                key={res.id}
+                className="flex items-center justify-between rounded-xl border border-rv-border bg-rv-surface p-4"
               >
-                <div className="flex-1">
+                <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">
-                      Reservation #{reservation.id}
-                    </h3>
-                    <StatusBadge status={reservation.status} />
+                    <span className="font-semibold text-rv-text">{roomName(res.roomId)}</span>
+                    <StatusBadge status={res.status} />
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {reservation.guestName}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-700">
-                    <span className="font-medium">Check-in:</span> {formatDate(reservation.checkIn)}
-                    {" • "}
-                    <span className="font-medium">Check-out:</span> {formatDate(reservation.checkOut)}
+                  <p className="mt-1 text-sm text-rv-muted">
+                    {res.checkIn} &rarr; {res.checkOut}
                   </p>
                 </div>
                 <Link
-                  to={`/guest/rooms/${reservation.roomId}`}
-                  className="text-sm font-medium text-brand-primary hover:text-brand-accent"
+                  to={`/reservation/${res.roomId}`}
+                  className="text-xs font-medium text-rv-accent hover:underline"
                 >
-                  View Room →
+                  View
                 </Link>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="rounded-lg bg-slate-50 p-6 text-center">
-            <p className="text-slate-600">No upcoming reservations</p>
-            <Link to="/guest/rooms">
-              <Button variant="secondary" className="mt-3">
-                Browse Rooms
-              </Button>
-            </Link>
-          </div>
         )}
-      </Card>
-
-      {/* Additional Info */}
-      <Card title="Need Help?">
-        <div className="space-y-2 text-sm text-slate-600">
-          <p>📧 Have questions? Contact support anytime.</p>
-          <p>📱 Check your notifications for important updates.</p>
-          <p>🔐 Your account is secure with encryption.</p>
-        </div>
-      </Card>
+      </div>
     </div>
   );
 }
-
-export default Dashboard;

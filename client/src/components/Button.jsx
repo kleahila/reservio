@@ -1,15 +1,16 @@
-function Button({
+export default function Button({
   variant = "primary",
   onClick,
   children,
   disabled = false,
   type = "button",
+  className = "",
 }) {
-  const variantStyles = {
-    primary: "bg-brand-primary text-white hover:bg-brand-accent",
-    secondary:
-      "bg-white text-brand-primary border border-brand-primary hover:bg-slate-100",
-    danger: "bg-red-600 text-white hover:bg-red-700",
+  const variants = {
+    primary:   "bg-rv-accent text-white hover:bg-rv-accent/90",
+    secondary: "bg-rv-surface2 text-rv-text border border-rv-border2 hover:bg-rv-border",
+    danger:    "bg-rv-danger text-white hover:bg-rv-danger/90",
+    ghost:     "text-rv-muted hover:bg-rv-surface2 hover:text-rv-text",
   };
 
   return (
@@ -17,13 +18,11 @@ function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-md px-4 py-2 text-sm font-semibold transition ${variantStyles[variant] || variantStyles.primary} ${
-        disabled ? "cursor-not-allowed opacity-60" : ""
-      }`}
+      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
+        variants[variant] ?? variants.primary
+      } ${disabled ? "cursor-not-allowed opacity-50" : ""} ${className}`}
     >
       {children}
     </button>
   );
 }
-
-export default Button;

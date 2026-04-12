@@ -1,25 +1,35 @@
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
-function Navbar({ title = "Reservio", subtitle, links = [] }) {
+/**
+ * Navbar — guest portal top navigation
+ * Props:
+ *   links  [{ to, label }]   nav links shown on the right
+ */
+export default function Navbar({ links = [] }) {
   return (
-    <header className="flex w-full items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:px-6">
-      <div>
-        <h1 className="text-lg font-semibold text-brand-primary">{title}</h1>
-        {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+    <header className="sticky top-0 z-40 border-b border-rv-border bg-rv-surface/90 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <Link to="/" className="text-lg font-bold tracking-tight text-rv-text">
+          Reservio
+        </Link>
+        <nav className="flex items-center gap-1 text-sm">
+          {links.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-1.5 font-medium transition ${
+                  isActive
+                    ? "bg-rv-accent-soft text-rv-accent"
+                    : "text-rv-muted hover:text-rv-text"
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
-      <nav className="flex items-center gap-3 text-sm">
-        {links.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            className="font-medium text-brand-accent hover:text-brand-primary"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }
-
-export default Navbar;

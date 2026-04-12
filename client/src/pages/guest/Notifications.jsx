@@ -1,296 +1,102 @@
 import { useState } from "react";
-import Card from "../../components/Card";
-import Badge from "../../components/Badge";
-import Button from "../../components/Button";
-import { formatDate } from "../../utils/validation";
 
-const seedNotifications = [
-  {
-    id: 1,
-    message: "Your room is ready for check-in.",
-    room: "Room 205",
-    status: "info",
-    time: "10 min ago",
-    read: false,
-  },
-  {
-    id: 2,
-    message: "Spa discount: 20% this afternoon.",
-    room: "Spa & Wellness",
-    status: "offer",
-    time: "1 hr ago",
-    read: false,
-  },
-  {
-    id: 3,
-    message: "Shuttle to city center departs at 18:00.",
-    room: "Concierge",
-    status: "reminder",
-    time: "3 hr ago",
-    read: true,
-  },
-  {
-    id: 4,
-    message: "Your checkout is tomorrow at 11:00 AM.",
-    room: "Room 205",
-    status: "info",
-    time: "1 day ago",
-    read: true,
-  },
-  {
-    id: 5,
-    message: "Welcome to our hotel! Enjoy your stay.",
-    room: "Front Desk",
-    status: "welcome",
-    time: "2 days ago",
-    read: true,
-  },
+const INITIAL = [
+  { id: 1, type: "info",    title: "Reservation confirmed",    body: "Your stay at Grand Hotel is confirmed for Apr 15–18.",    time: "2 hours ago",  read: false },
+  { id: 2, type: "success", title: "Check-in ready",           body: "Your room is ready early. Head to reception anytime.",    time: "1 day ago",    read: false },
+  { id: 3, type: "warning", title: "Parking spot expiring",    body: "Your parking reservation for spot A1 expires tomorrow.",  time: "1 day ago",    read: true  },
+  { id: 4, type: "info",    title: "New service available",    body: "Sunset terrace dining is now available to book.",          time: "3 days ago",   read: true  },
+  { id: 5, type: "success", title: "Sunbed booked",            body: "Poolside sunbed P3 is reserved for you tomorrow, 10 AM.", time: "3 days ago",   read: true  },
 ];
 
-function Notifications() {
-  const [notifications, setNotifications] = useState(seedNotifications);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [filter, setFilter] = useState("all"); // all, unread, offers
+const TYPE_CLS = {
+  info:    "border-rv-accent/20 bg-rv-accent-soft",
+  success: "border-rv-success/20 bg-rv-success-soft",
+  warning: "border-rv-warning/20 bg-rv-warning-soft",
+  danger:  "border-rv-danger/20 bg-rv-danger-soft",
+};
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+const DOT_CLS = {
+  info:    "bg-rv-accent",
+  success: "bg-rv-success",
+  warning: "bg-rv-warning",
+  danger:  "bg-rv-danger",
+};
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (filter === "unread") return !n.read;
-    if (filter === "offers") return n.status === "offer";
-    return true;
-  });
+export default function Notifications() {
+  const [notifications, setNotifications] = useState(INITIAL);
+  const unread = notifications.filter((n) => !n.read).length;
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "info":
-        return "bg-blue-100 text-blue-800";
-      case "offer":
-        return "bg-green-100 text-green-800";
-      case "reminder":
-        return "bg-amber-100 text-amber-800";
-      case "welcome":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
+  function markAll() {
+    setNotifications((n) => n.map((x) => ({ ...x, read: true })));
+  }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "info":
-        return "ℹ️";
-      case "offer":
-        return "🎉";
-      case "reminder":
-        return "⏰";
-      case "welcome":
-        return "👋";
-      default:
-        return "📬";
-    }
-  };
+  function dismiss(id) {
+    setNotifications((n) => n.filter((x) => x.id !== id));
+  }
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
-  };
-
-  const handleDelete = (id) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-    setIsDropdownOpen(false);
-  };
+  function markRead(id) {
+    setNotifications((n) => n.map((x) => x.id === id ? { ...x, read: true } : x));
+  }
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Header */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-brand-primary">
-                Notifications 🔔
-              </h1>
-              <p className="mt-1 text-slate-600">
-                Stay updated with your hotel activities
-              </p>
-            </div>
-            {unreadCount > 0 && (
-              <Badge className="bg-red-100 text-red-800 text-lg px-3 py-2">
-                {unreadCount} unread
-              </Badge>
-            )}
-          </div>
-        </Card>
-
-        {/* Notification Center */}
-        <Card title="Notification Center">
-          {notifications.length === 0 ? (
-            <div className="rounded-lg bg-slate-50 p-8 text-center">
-              <div className="text-5xl mb-3">📭</div>
-              <p className="text-lg text-slate-600">No notifications</p>
-              <p className="text-sm text-slate-500 mt-1">
-                You're all caught up!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Filters */}
-              <div className="flex gap-2 mb-4 border-b border-slate-200 pb-3">
-                {["all", "unread", "offers"].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-3 py-1 text-sm font-medium rounded transition ${
-                      filter === f
-                        ? "bg-brand-primary text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    {f === "all"
-                      ? "All"
-                      : f === "unread"
-                        ? `Unread (${unreadCount})`
-                        : "Offers"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Notifications List */}
-              <div className="space-y-2">
-                {filteredNotifications.length > 0 ? (
-                  filteredNotifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`flex gap-3 rounded-lg p-4 transition ${
-                        notification.read
-                          ? "bg-slate-50"
-                          : "bg-blue-50 border-l-4 border-blue-500"
-                      }`}
-                    >
-                      {/* Icon */}
-                      <div className="text-2xl flex-shrink-0">
-                        {getStatusIcon(notification.status)}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-slate-900">
-                              {notification.message}
-                            </p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <Badge
-                                className={`${getStatusColor(notification.status)}`}
-                              >
-                                {notification.room}
-                              </Badge>
-                              <span className="text-xs text-slate-500">
-                                {notification.time}
-                              </span>
-                            </div>
-                          </div>
-
-                          {!notification.read && (
-                            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {!notification.read && (
-                          <button
-                            onClick={() => handleMarkAsRead(notification.id)}
-                            className="rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700 text-sm"
-                            title="Mark as read"
-                          >
-                            ✓
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(notification.id)}
-                          className="rounded p-1 text-slate-500 hover:bg-red-100 hover:text-red-700"
-                          title="Delete"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-lg bg-slate-50 p-6 text-center">
-                    <p className="text-slate-600">No notifications matching filter</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              {notifications.length > 0 && (
-                <div className="border-t border-slate-200 pt-3 mt-3 flex gap-2">
-                  {unreadCount > 0 && (
-                    <Button
-                      variant="secondary"
-                      onClick={handleMarkAllAsRead}
-                      className="text-sm"
-                    >
-                      Mark All as Read
-                    </Button>
-                  )}
-                  <Button
-                    variant="secondary"
-                    onClick={handleClearAll}
-                    className="text-sm"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* Notification Preferences */}
-        <Card title="Notification Preferences">
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
-              <input
-                type="checkbox"
-                defaultChecked
-                className="w-4 h-4 rounded"
-              />
-              <span className="font-medium">Room Updates</span>
-            </label>
-            <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
-              <input
-                type="checkbox"
-                defaultChecked
-                className="w-4 h-4 rounded"
-              />
-              <span className="font-medium">Special Offers</span>
-            </label>
-            <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
-              <input
-                type="checkbox"
-                defaultChecked
-                className="w-4 h-4 rounded"
-              />
-              <span className="font-medium">Reminders</span>
-            </label>
-          </div>
-        </Card>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-rv-text">Notifications</h1>
+          <p className="mt-1 text-rv-muted">
+            {unread > 0 ? `${unread} unread notification${unread !== 1 ? "s" : ""}` : "All caught up."}
+          </p>
+        </div>
+        {unread > 0 && (
+          <button
+            onClick={markAll}
+            className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted hover:text-rv-text"
+          >
+            Mark all as read
+          </button>
+        )}
       </div>
-    </>
+
+      {notifications.length === 0 ? (
+        <div className="rounded-xl border border-rv-border bg-rv-surface p-12 text-center text-rv-muted">
+          No notifications.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map((n) => (
+            <div
+              key={n.id}
+              onClick={() => markRead(n.id)}
+              className={`relative flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition ${
+                n.read
+                  ? "border-rv-border bg-rv-surface"
+                  : TYPE_CLS[n.type] ?? TYPE_CLS.info
+              }`}
+            >
+              {!n.read && (
+                <span
+                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${DOT_CLS[n.type] ?? DOT_CLS.info}`}
+                />
+              )}
+              <div className={`flex-1 ${n.read ? "pl-6" : ""}`}>
+                <p className="font-semibold text-rv-text">{n.title}</p>
+                <p className="mt-0.5 text-sm text-rv-muted">{n.body}</p>
+                <p className="mt-2 text-xs text-rv-subtle">{n.time}</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+                className="shrink-0 text-rv-subtle hover:text-rv-muted"
+                aria-label="Dismiss"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="1" y1="1" x2="13" y2="13" />
+                  <line x1="13" y1="1" x2="1" y2="13" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
-
-export default Notifications;
