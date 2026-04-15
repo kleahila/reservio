@@ -36,3 +36,9 @@ client/coverage/
 tmp/
 temp/
 *.tmp
+node_modules/
+dist/
+.vite/
+client/node_modules/
+client/dist/
+client/.vite/
