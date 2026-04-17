@@ -4,15 +4,13 @@ export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ["Playfair Display", "Georgia", "Times New Roman", "serif"],
+        sans:  ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        mono:  ["'JetBrains Mono'", "ui-monospace", "monospace"],
+      },
       colors: {
-        // Legacy brand tokens (kept for backward compatibility during migration)
-        brand: {
-          primary: "#1B4F72",
-          accent: "#2E75B6",
-          light: "#F8FAFC",
-        },
-        // Reservio design system tokens — values come from CSS variables
-        // Light mode defaults in :root, dark mode overrides in .dark
+        // Flat tokens (used directly, no opacity modifier)
         "rv-bg":           "var(--rv-bg)",
         "rv-surface":      "var(--rv-surface)",
         "rv-surface2":     "var(--rv-surface2)",
@@ -22,14 +20,21 @@ export default {
         "rv-success-soft": "var(--rv-success-soft)",
         "rv-warning-soft": "var(--rv-warning-soft)",
         "rv-danger-soft":  "var(--rv-danger-soft)",
-        // Opacity-capable tokens (RGB channel format for Tailwind /opacity modifier)
-        "rv-accent":   "rgb(var(--rv-accent) / <alpha-value>)",
-        "rv-text":     "rgb(var(--rv-text) / <alpha-value>)",
-        "rv-muted":    "rgb(var(--rv-muted) / <alpha-value>)",
-        "rv-subtle":   "rgb(var(--rv-subtle) / <alpha-value>)",
-        "rv-success":  "rgb(var(--rv-success) / <alpha-value>)",
-        "rv-warning":  "rgb(var(--rv-warning) / <alpha-value>)",
-        "rv-danger":   "rgb(var(--rv-danger) / <alpha-value>)",
+        // Opacity-capable tokens (RGB channel → Tailwind /opacity modifier)
+        "rv-accent":  "rgb(var(--rv-accent) / <alpha-value>)",
+        "rv-sea":     "rgb(var(--rv-sea) / <alpha-value>)",
+        "rv-olive":   "rgb(var(--rv-olive) / <alpha-value>)",
+        "rv-text":    "rgb(var(--rv-text) / <alpha-value>)",
+        "rv-muted":   "rgb(var(--rv-muted) / <alpha-value>)",
+        "rv-subtle":  "rgb(var(--rv-subtle) / <alpha-value>)",
+        "rv-success": "rgb(var(--rv-success) / <alpha-value>)",
+        "rv-warning": "rgb(var(--rv-warning) / <alpha-value>)",
+        "rv-danger":  "rgb(var(--rv-danger) / <alpha-value>)",
+        // Named Mediterranean swatches (for direct use without opacity)
+        "med-terracotta": "#C65D3B",
+        "med-sand":       "#F2E9DC",
+        "med-sea":        "#3A6F73",
+        "med-olive":      "#6A7B4F",
       },
     },
   },

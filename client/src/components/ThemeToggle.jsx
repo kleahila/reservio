@@ -24,8 +24,25 @@ function MoonIcon() {
   );
 }
 
-export default function ThemeToggle() {
+/**
+ * compact=true  → inline button for top navigation bars
+ * compact=false → fixed-position floating button (default, original behavior)
+ */
+export default function ThemeToggle({ compact = false }) {
   const { theme, toggleTheme } = useTheme();
+
+  if (compact) {
+    return (
+      <button
+        onClick={toggleTheme}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-rv-border text-rv-muted transition-all hover:text-rv-accent hover:border-rv-accent/30 hover:bg-rv-surface2"
+      >
+        <span className="scale-75">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={toggleTheme}
