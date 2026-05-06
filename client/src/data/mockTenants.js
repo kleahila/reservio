@@ -1,0 +1,38 @@
+export const mockTenants = [
+  {
+    id: 1,
+    name: "Grand Hotel Tirana",
+    subdomain: "grandhotel",
+    plan: "Premium",
+    status: "Active",
+    createdAt: "2025-09-12",
+    ownerEmail: "owner@grandhotel.com",
+  },
+  {
+    id: 2,
+    name: "Riviera Boutique",
+    subdomain: "riviera",
+    plan: "Basic",
+    status: "Pending",
+    createdAt: "2026-01-04",
+    ownerEmail: "admin@riviera.com",
+  },
+  {
+    id: 3,
+    name: "Alpine Lodge",
+    subdomain: "alpinelodge",
+    plan: "Custom",
+    status: "Active",
+    createdAt: "2025-11-30",
+    ownerEmail: "info@alpinelodge.com",
+  },
+  {
+    id: 4,
+    name: "Seaside Inn",
+    subdomain: "seasideinn",
+    plan: "Basic",
+    status: "Suspended",
+    createdAt: "2025-08-20",
+    ownerEmail: "contact@seasideinn.com",
+  },
+];

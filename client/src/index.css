@@ -1,0 +1,174 @@
+/* Mediterranean Hotel Command Center — Typography */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Mediterranean Hotel Command Center — Design Tokens ─────────────────── */
+
+:root {
+  /* ── Warm backgrounds ────────────────────────────────────────────────── */
+  --rv-bg:            #F2E9DC;                        /* Sand */
+  --rv-surface:       #FFFBF6;                        /* Warm white */
+  --rv-surface2:      #EDE4D5;                        /* Deeper sand (hover) */
+
+  /* ── Borders ─────────────────────────────────────────────────────────── */
+  --rv-border:        rgba(168, 130, 95, 0.18);
+  --rv-border2:       rgba(168, 130, 95, 0.32);
+
+  /* ── Semantic tints ──────────────────────────────────────────────────── */
+  --rv-accent-soft:   rgba(198, 93, 59, 0.09);        /* Terracotta tint */
+  --rv-success-soft:  rgba(106, 123, 79, 0.10);       /* Olive tint */
+  --rv-warning-soft:  rgba(184, 134, 11, 0.09);       /* Amber tint */
+  --rv-danger-soft:   rgba(185, 28, 28, 0.07);        /* Red tint */
+
+  /* ── RGB channel tokens (Tailwind /opacity modifier) ─────────────────── */
+  --rv-accent:        198 93 59;      /* Terracotta — primary actions */
+  --rv-sea:           58 111 115;     /* Sea Blue — informational */
+  --rv-olive:         106 123 79;     /* Olive — success/ready */
+  --rv-text:          30 30 30;       /* Near-black */
+  --rv-muted:         107 107 107;    /* Muted warm gray */
+  --rv-subtle:        162 148 131;    /* Warm subtle */
+  --rv-success:       106 123 79;     /* Olive */
+  --rv-warning:       184 134 11;     /* Warm amber */
+  --rv-danger:        185 28 28;      /* Deep red */
+}
+
+/* ── Mediterranean Night Mode ─────────────────────────────────────────────── */
+.dark {
+  --rv-bg:            #1C1714;
+  --rv-surface:       #261E19;
+  --rv-surface2:      #2F2520;
+  --rv-border:        rgba(242, 233, 220, 0.09);
+  --rv-border2:       rgba(242, 233, 220, 0.16);
+  --rv-accent-soft:   rgba(198, 93, 59, 0.15);
+  --rv-success-soft:  rgba(106, 123, 79, 0.15);
+  --rv-warning-soft:  rgba(251, 191, 36, 0.10);
+  --rv-danger-soft:   rgba(248, 113, 113, 0.10);
+
+  --rv-accent:        210 107 75;     /* Softer terracotta in dark */
+  --rv-sea:           80 140 145;     /* Brighter sea in dark */
+  --rv-olive:         130 150 100;    /* Brighter olive in dark */
+  --rv-text:          235 225 213;    /* Warm off-white */
+  --rv-muted:         160 145 128;    /* Warm muted */
+  --rv-subtle:        100 88 74;      /* Dark warm subtle */
+  --rv-success:       130 150 100;
+  --rv-warning:       214 165 37;
+  --rv-danger:        220 90 90;
+}
+
+/* ─── Base typography ─────────────────────────────────────────────────────── */
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--rv-bg);
+  color: rgb(var(--rv-text));
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+.font-serif,
+h1.serif, h2.serif, h3.serif {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+}
+
+/* ─── Thin warm scrollbar ─────────────────────────────────────────────────── */
+
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
+  background-color: rgba(168, 130, 95, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 130, 95, 0.45); }
+* { scrollbar-width: thin; scrollbar-color: rgba(168, 130, 95, 0.25) transparent; }
+
+/* ─── Ambient time-of-day overlay ─────────────────────────────────────────── */
+
+.rv-ambient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  mix-blend-mode: multiply;
+  transition: opacity 90000ms ease, background-color 90000ms ease;
+}
+
+/* ─── Room tile interactions ─────────────────────────────────────────────── */
+
+.room-tile {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.room-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(198, 93, 59, 0.18);
+}
+.room-tile.is-selected {
+  box-shadow: 0 0 0 2px #C65D3B, 0 8px 28px rgba(198, 93, 59, 0.22);
+}
+
+/* ─── Keycard panel ──────────────────────────────────────────────────────── */
+
+.keycard-slide-in {
+  animation: keycardIn 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes keycardIn {
+  from { transform: translateX(100%); opacity: 0.5; }
+  to   { transform: translateX(0);    opacity: 1;   }
+}
+
+/* ─── Timeline blocks ────────────────────────────────────────────────────── */
+
+.tl-block {
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+.tl-block:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  transform: translateY(-1px);
+}
+.tl-block.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.20);
+  transform: translateY(-2px) scale(1.015);
+  z-index: 20;
+  transition: box-shadow 0ms, transform 0ms;
+}
+
+/* ─── Command bar backdrop ───────────────────────────────────────────────── */
+
+.cmd-backdrop {
+  animation: fadeIn 120ms ease both;
+}
+.cmd-panel {
+  animation: cmdSlideDown 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes fadeIn      { from { opacity: 0; }        to { opacity: 1; }       }
+@keyframes cmdSlideDown { from { transform: translateY(-8px); opacity: 0; }
+                          to   { transform: translateY(0);    opacity: 1; }    }
+
+/* ─── Task Stack ─────────────────────────────────────────────────────────── */
+
+.task-block {
+  transition: box-shadow 150ms ease;
+}
+.task-block:hover {
+  box-shadow: 0 4px 16px rgba(30, 20, 10, 0.12);
+}
+.task-block-dragging {
+  box-shadow: 0 14px 32px rgba(30, 20, 10, 0.20) !important;
+  z-index: 30 !important;
+}
+/* Completed tasks — fade and desaturate (brief: completed tasks fade/desaturate) */
+.task-block-done {
+  opacity: 0.42;
+  filter: saturate(0);
+  transition: opacity 500ms ease, filter 500ms ease;
+  cursor: default !important;
+}
+/* Conflict tasks — danger tint */
+.task-block-conflict {
+  background-color: var(--rv-danger-soft) !important;
+  border-color: rgba(185, 28, 28, 0.28) !important;
+}

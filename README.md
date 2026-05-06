@@ -1,52 +1,163 @@
 # Reservio
 
-## Overview 🚀
+Multi-tenant SaaS hotel management platform — React 18 · Vite · Tailwind CSS
 
-Reservio is a cloud-based, multi-tenant SaaS hotel management platform built as a browser-first web application. It enables multiple hotels to operate on the same system while keeping tenant data isolated, supporting end-to-end hotel workflows for guests and staff.
+---
 
-Designed with a responsive, mobile-first interface, Reservio combines operational management with a self-service guest experience through real-time updates, RBAC, and stateless JWT authentication.
+## Overview
 
-## Features ✨
+Reservio lets multiple hotels run on a shared platform with isolated data. It covers the full hotel workflow across five user roles: guest, staff, housekeeper, hotel admin, and super admin.
 
-- Multi-tenant architecture with tenant-based data isolation
-- Role-Based Access Control (RBAC) for secure role separation
-- Real-time operational updates using WebSockets
-- Room browsing and availability checking
-- Reservation and booking workflows
-- Check-in and check-out management
-- Room status and occupancy management
-- Housekeeping task prioritization
-- Admin dashboards and tenant (hotel) management
+The frontend is a pure React SPA with mock data — no backend required to run it.
 
-## User Roles 👥
+---
 
-1. **Guest**
-   - Browse rooms, check availability, and create/manage reservations
-2. **Receptionist / Staff**
-   - Handle bookings, check-in/check-out, and front-desk operations
-3. **Housekeeper**
-   - Track room cleaning priorities and update housekeeping status
-4. **Hotel Administrator**
-   - Manage rooms, staff, dashboards, and hotel-level configuration
-5. **Super Administrator**
-   - Manage tenants (hotels), platform-level controls, and global oversight
+## Running the Frontend
 
-## Tech Stack 🛠️
+### Prerequisites
 
-| Layer          | Technology       |
-| -------------- | ---------------- |
-| Frontend       | React, Vite      |
-| Backend        | Node.js, Express |
-| Database       | PostgreSQL       |
-| ORM            | Prisma           |
-| Realtime       | Socket.io        |
-| Authentication | JWT              |
-| Deployment     | Railway          |
-| CI/CD          | GitHub Actions   |
+- Node.js v18+ — `node -v` to check
+- npm — ships with Node
+
+### Steps
+
+```bash
+# From the repo root
+cd client
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173**
+
+---
+
+## Navigating the Portals
+
+The fastest way to navigate between portals is the built-in role switcher:
+
+**http://localhost:5173/dev/switcher**
+
+Click any role to set your session and jump directly to that portal. No login credentials needed.
+
+---
+
+### URL Reference
+
+#### Super Admin
+
+| Screen             | URL                       |
+| ------------------ | ------------------------- |
+| Tenant Management  | /superadmin/tenants       |
+| Platform Analytics | /superadmin/analytics     |
+| Onboard New Hotel  | /superadmin/onboard       |
+| Subscription Plans | /superadmin/subscriptions |
+
+#### Hotel Admin
+
+| Screen              | URL              |
+| ------------------- | ---------------- |
+| Room Management     | /admin/rooms     |
+| Staff Management    | /admin/staff     |
+| Dynamic Pricing     | /admin/pricing   |
+| Analytics Dashboard | /admin/analytics |
+| Parking Management  | /admin/parking   |
+
+#### Staff
+
+| Screen                | URL                 |
+| --------------------- | ------------------- |
+| Reservation Dashboard | /staff/dashboard    |
+| Reservation List      | /staff/reservations |
+| Room Status Grid      | /staff/rooms        |
+| Housekeeping Override | /staff/housekeeping |
+
+#### Housekeeper
+
+| Screen     | URL                |
+| ---------- | ------------------ |
+| Task Board | /housekeeper/tasks |
+
+#### Guest
+
+| Screen             | URL                 |
+| ------------------ | ------------------- |
+| Landing            | /                   |
+| Room Browsing      | /rooms              |
+| Room Detail        | /rooms/:id          |
+| Check Availability | /rooms/availability |
+| Parking Map        | /parking            |
+| Sunbed Map         | /sunbeds            |
+| Marketplace        | /marketplace        |
+| Guest Dashboard    | /guest/dashboard    |
+
+---
+
+## Demo Highlights
+
+**Tenant Management** (`/superadmin/tenants`)
+
+- Filter by plan and status, search by name or subdomain
+- Approve pending tenants, suspend/reactivate, change plans, delete with confirmation
+
+**Onboard Hotel** (`/superadmin/onboard`)
+
+- Hotel name auto-generates the subdomain slug
+- Duplicate subdomain validation
+
+**Dynamic Pricing** (`/admin/pricing`)
+
+- Toggle rules on/off — price table updates live
+- Set occupancy threshold to 33% to trigger the active state
+
+**Parking Management** (`/admin/parking`)
+
+- Grid view: click any spot to cycle its status
+- Table view: add, edit, remove spots
+
+**Reservation Dashboard** (`/staff/dashboard`)
+
+- Confirm pending → check in → check out workflow
+- KPI cards update with every action
+
+---
+
+## Project Structure
+
+```
+reservio/
+├── client/                  # Frontend (React + Vite)
+│   ├── src/
+│   │   ├── components/      # Shared UI (Sidebar, Modal, PageHeader, StatusBadge, …)
+│   │   ├── context/         # ThemeContext (light/dark)
+│   │   ├── data/            # Mock data (mockRooms, mockReservations, …)
+│   │   ├── hooks/           # useAuth, useTenant
+│   │   ├── layouts/         # GuestLayout, PortalLayout, per-role wrappers
+│   │   └── pages/           # guest/ staff/ housekeeper/ admin/ superadmin/ dev/
+│   ├── tailwind.config.js   # rv- design token definitions
+│   └── index.html
+├── docs/
+│   ├── design/              # Figma screens
+│   └── requirements/        # SRS and user stories (PDF)
+└── README.md
+```
+
+---
+
+## Tech Stack
+
+| Layer              | Technology                                       |
+| ------------------ | ------------------------------------------------ |
+| Frontend           | React 18, React Router v6                        |
+| Build              | Vite                                             |
+| Styling            | Tailwind CSS with CSS variable theme tokens      |
+| State              | React useState + Context (mock data, no backend) |
+| Backend (planned)  | Node.js, Express, PostgreSQL, Prisma             |
+| Auth (planned)     | JWT                                              |
+| Realtime (planned) | Socket.io                                        |
+
+---
 
 ## Team
 
-- **Backend:** Orest Paja, Licern Beqiri, Jorida Vrusho
-- **Frontend:** Eleana Zharkalli, Ina Ndoni
-- **System Modeling & Diagrams:** Joni Begaj
-- **CI/CD, Deployment, Testing, Documentation:** Klea Hila
+Orest Paja, Licern Beqiri, Jorida Vrusho, Eleana Zharkalli, Ina Ndoni, Joni Begaj, Klea Hila
