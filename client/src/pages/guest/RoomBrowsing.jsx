@@ -1,23 +1,34 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import StatusBadge from "../../components/StatusBadge";
-import { mockRooms } from "../../data/mockRooms";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import StatusBadge from '../../components/StatusBadge';
+import { getRooms } from '../../api/rooms';
 
-const STATUSES = ["All", "Available", "Occupied", "Maintenance"];
+const STATUSES = ['All', 'Available', 'Occupied', 'Maintenance'];
 
 export default function RoomBrowsing() {
-  const [filter, setFilter] = useState("All");
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('All');
 
-  const rooms = filter === "All" ? mockRooms : mockRooms.filter((r) => r.status === filter);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getRooms()
+      .then((data) => { if (!cancelled) { setRooms(data || []); setLoading(false); } })
+      .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, []);
+
+  const visible = filter === 'All' ? rooms : rooms.filter((r) => r.status === filter);
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-rv-text">Browse Rooms</h1>
-        <p className="mt-1 text-rv-muted">{mockRooms.length} rooms available across all categories.</p>
+        <p className="mt-1 text-rv-muted">{rooms.length} rooms available across all categories.</p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {STATUSES.map((s) => (
           <button
@@ -25,8 +36,8 @@ export default function RoomBrowsing() {
             onClick={() => setFilter(s)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               filter === s
-                ? "bg-rv-accent text-white"
-                : "border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text"
+                ? 'bg-rv-accent text-white'
+                : 'border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text'
             }`}
           >
             {s}
@@ -40,22 +51,32 @@ export default function RoomBrowsing() {
         </Link>
       </div>
 
-      {rooms.length === 0 ? (
+      {loading && (
+        <div className="py-12 text-center text-rv-muted">Loading rooms…</div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-rv-danger/20 bg-rv-danger-soft px-5 py-4 text-sm text-rv-danger">
+          Failed to load rooms: {error}
+        </div>
+      )}
+
+      {!loading && !error && visible.length === 0 && (
         <div className="rounded-xl border border-rv-border bg-rv-surface p-12 text-center text-rv-muted">
           No rooms match this filter.
         </div>
-      ) : (
+      )}
+
+      {!loading && !error && visible.length > 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {rooms.map((room) => (
+          {visible.map((room) => (
             <div
               key={room.id}
               className="flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm transition hover:border-rv-border2 hover:shadow-md"
             >
-              <img
-                src={room.photos[0]}
-                alt={room.type}
-                className="h-44 w-full object-cover"
-              />
+              {room.photos?.[0] && (
+                <img src={room.photos[0]} alt={room.type} className="h-44 w-full object-cover" />
+              )}
               <div className="flex flex-1 flex-col p-4">
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-rv-text">{room.type}</h3>
@@ -72,13 +93,13 @@ export default function RoomBrowsing() {
                   <Link
                     to={`/reservation/${room.id}`}
                     className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      room.status === "Available"
-                        ? "bg-rv-accent text-white hover:bg-rv-accent/90"
-                        : "cursor-not-allowed bg-rv-surface2 text-rv-muted"
+                      room.status === 'Available'
+                        ? 'bg-rv-accent text-white hover:bg-rv-accent/90'
+                        : 'cursor-not-allowed bg-rv-surface2 text-rv-muted'
                     }`}
-                    onClick={room.status !== "Available" ? (e) => e.preventDefault() : undefined}
+                    onClick={room.status !== 'Available' ? (e) => e.preventDefault() : undefined}
                   >
-                    {room.status === "Available" ? "Reserve" : "Unavailable"}
+                    {room.status === 'Available' ? 'Reserve' : 'Unavailable'}
                   </Link>
                 </div>
               </div>

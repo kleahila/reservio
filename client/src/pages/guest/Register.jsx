@@ -1,37 +1,51 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { register as apiRegister } from '../../api/auth';
 
 function validate(form) {
   const e = {};
-  if (!form.fullName.trim()) e.fullName = "Full name is required.";
-  if (!form.email.includes("@")) e.email = "Valid email is required.";
-  if (form.password.length < 6) e.password = "Password must be at least 6 characters.";
+  if (!form.fullName.trim()) e.fullName = 'Full name is required.';
+  if (!form.email.includes('@')) e.email = 'Valid email is required.';
+  if (form.password.length < 6) e.password = 'Password must be at least 6 characters.';
   return e;
 }
 
 const input = (err) =>
   `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-surface text-rv-text placeholder:text-rv-subtle outline-none transition focus:ring-2 focus:ring-rv-accent/40 ${
-    err ? "border-rv-danger" : "border-rv-border2"
+    err ? 'border-rv-danger' : 'border-rv-border2'
   }`;
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName: "", email: "", password: "" });
+  const [form, setForm] = useState({ fullName: '', email: '', password: '' });
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
-    if (errors[field]) setErrors((e) => ({ ...e, [field]: "" }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: '' }));
+    setApiError('');
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const errs = validate(form);
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
-    setSuccess(true);
-    setTimeout(() => navigate("/login"), 2000);
+
+    setLoading(true);
+    setApiError('');
+    try {
+      await apiRegister(form.fullName, form.email, form.password);
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (err) {
+      setApiError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -51,52 +65,40 @@ export default function Register() {
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-rv-text">Full name</label>
-                <input
-                  value={form.fullName}
-                  onChange={(e) => set("fullName", e.target.value)}
-                  placeholder="Jane Smith"
-                  className={input(errors.fullName)}
-                />
+                <input value={form.fullName} onChange={(e) => set('fullName', e.target.value)} placeholder="Jane Smith" className={input(errors.fullName)} />
                 {errors.fullName && <p className="mt-1 text-xs text-rv-danger">{errors.fullName}</p>}
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-rv-text">Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => set("email", e.target.value)}
-                  placeholder="you@example.com"
-                  className={input(errors.email)}
-                />
+                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@example.com" className={input(errors.email)} />
                 {errors.email && <p className="mt-1 text-xs text-rv-danger">{errors.email}</p>}
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-rv-text">Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => set("password", e.target.value)}
-                  placeholder="Min. 6 characters"
-                  className={input(errors.password)}
-                />
+                <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Min. 6 characters" className={input(errors.password)} />
                 {errors.password && <p className="mt-1 text-xs text-rv-danger">{errors.password}</p>}
               </div>
 
+              {apiError && (
+                <p className="rounded-lg border border-rv-danger/20 bg-rv-danger-soft px-3 py-2 text-sm text-rv-danger">
+                  {apiError}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full rounded-lg bg-rv-accent py-2.5 text-sm font-semibold text-white transition hover:bg-rv-accent/90"
+                disabled={loading}
+                className="w-full rounded-lg bg-rv-accent py-2.5 text-sm font-semibold text-white transition hover:bg-rv-accent/90 disabled:opacity-50"
               >
-                Create account
+                {loading ? 'Creating account…' : 'Create account'}
               </button>
             </form>
 
             <p className="mt-5 text-center text-xs text-rv-muted">
-              Already have an account?{" "}
-              <Link to="/login" className="font-medium text-rv-accent hover:underline">
-                Sign in
-              </Link>
+              Already have an account?{' '}
+              <Link to="/login" className="font-medium text-rv-accent hover:underline">Sign in</Link>
             </p>
           </div>
         )}
