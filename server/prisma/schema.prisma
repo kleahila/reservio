@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  BASIC
+  PREMIUM
+  CUSTOM
+}
+
+enum UserRole {
+  GUEST
+  STAFF
+  HOUSEKEEPER
+  HOTEL_ADMIN
+  SUPER_ADMIN
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum SpotStatus {
+  AVAILABLE
+  TAKEN
+  LOCKED
+}
+
+enum SunbedStatus {
+  AVAILABLE
+  TAKEN
+  LOCKED
+}
+
+enum Slot {
+  MORNING
+  AFTERNOON
+  FULL_DAY
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+}
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  subdomain    String   @unique
+  plan         Plan     @default(BASIC)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  users            User[]
+  rooms            Room[]
+  reservations     Reservation[]
+  parkingSpots     ParkingSpot[]
+  sunbeds          Sunbed[]
+  sunbedReservations SunbedReservation[]
+  housekeepingTasks HousekeepingTask[]
+  services         Service[]
+  orders           Order[]
+  pricingRules     PricingRule[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  fullName     String
+  email        String
+  passwordHash String
+  role         UserRole @default(GUEST)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  sunbedReservations SunbedReservation[]
+  orders       Order[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Room {
+  id           String     @id @default(cuid())
+  tenantId     String
+  type         String
+  description  String?
+  pricePerNight Float
+  status       RoomStatus @default(AVAILABLE)
+  photos       String[]
+  createdAt    DateTime   @default(now())
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reservations     Reservation[]
+  housekeepingTasks HousekeepingTask[]
+
+  @@index([tenantId])
+}
+
+model Reservation {
+  id        String            @id @default(cuid())
+  tenantId  String
+  userId    String
+  roomId    String
+  checkIn   DateTime
+  checkOut  DateTime
+  status    ReservationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+  room    Room    @relation(fields: [roomId], references: [id])
+  orders  Order[]
+
+  @@index([tenantId])
+}
+
+model ParkingSpot {
+  id           String     @id @default(cuid())
+  tenantId     String
+  label        String
+  status       SpotStatus @default(AVAILABLE)
+  pricePerNight Float
+  lockedUntil  DateTime?
+  createdAt    DateTime   @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Sunbed {
+  id          String       @id @default(cuid())
+  tenantId    String
+  label       String
+  zone        String
+  status      SunbedStatus @default(AVAILABLE)
+  lockedUntil DateTime?
+  createdAt   DateTime     @default(now())
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sunbedReservations SunbedReservation[]
+
+  @@index([tenantId])
+}
+
+model SunbedReservation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  sunbedId  String
+  date      DateTime
+  slot      Slot
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+  sunbed Sunbed @relation(fields: [sunbedId], references: [id])
+
+  @@index([tenantId])
+}
+
+model HousekeepingTask {
+  id         String     @id @default(cuid())
+  tenantId   String
+  roomId     String
+  priority   Int        @default(1)
+  urgency    Boolean    @default(false)
+  assignedTo String?
+  status     TaskStatus @default(PENDING)
+  createdAt  DateTime   @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Service {
+  id       String @id @default(cuid())
+  tenantId String
+  name     String
+  category String
+  price    Float
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([tenantId])
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  serviceId     String
+  reservationId String
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([tenantId])
+}
+
+model PricingRule {
+  id                  String  @id @default(cuid())
+  tenantId            String
+  occupancyThreshold  Float
+  adjustmentPercent   Float
+  enabled             Boolean @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
