@@ -80,7 +80,7 @@ model Tenant {
 
 model User {
   id           String   @id @default(cuid())
-  tenantId     String
+  tenantId     String?
   fullName     String
   email        String
   passwordHash String
@@ -88,7 +88,7 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   reservations Reservation[]
   sunbedReservations SunbedReservation[]
   orders       Order[]

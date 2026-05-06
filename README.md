@@ -1,124 +1,179 @@
 # Reservio
 
-Multi-tenant SaaS hotel management platform — React 18 · Vite · Tailwind CSS
+Multi-tenant SaaS hotel management platform — React 18 · Vite · Tailwind CSS · Node.js · Express · PostgreSQL · Prisma
 
 ---
 
 ## Overview
 
-Reservio lets multiple hotels run on a shared platform with isolated data. It covers the full hotel workflow across five user roles: guest, staff, housekeeper, hotel admin, and super admin.
+Reservio lets multiple hotels run on a shared platform with isolated data. It covers the full hotel workflow across five user roles: **guest, staff, housekeeper, hotel admin, and super admin**.
 
-The frontend is a pure React SPA with mock data — no backend required to run it.
+The frontend is a React SPA connected to a real REST API backend with JWT authentication.
 
 ---
 
-## Running the Frontend
+## Prerequisites
 
-### Prerequisites
+| Tool | Version | Check |
+|---|---|---|
+| Node.js | v18+ | `node -v` |
+| npm | v9+ | `npm -v` |
+| PostgreSQL | v14+ | `psql --version` |
 
-- Node.js v18+ — `node -v` to check
-- npm — ships with Node
+---
 
-### Steps
+## Quickstart
+
+### 1 — Clone and install
 
 ```bash
-# From the repo root
+git clone <repo-url>
+cd reservio
+
+# Install frontend deps
+cd client && npm install && cd ..
+
+# Install backend deps
+cd server && npm install && cd ..
+```
+
+### 2 — Configure the backend
+
+```bash
+cd server
+cp .env.example .env   # if .env doesn't exist yet
+```
+
+Edit `server/.env`:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/reservio"
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRES_IN=7d
+PORT=4000
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+### 3 — Set up the database
+
+```bash
+cd server
+npx prisma migrate dev --name init   # creates tables
+npm run seed                          # seeds demo data
+```
+
+### 4 — Configure the frontend
+
+```bash
 cd client
-npm install
-npm run dev
+cp .env.example .env
+```
+
+`client/.env` should contain:
+
+```env
+VITE_API_URL=http://localhost:4000
+```
+
+### 5 — Start both servers
+
+**Terminal 1 — Backend:**
+
+```bash
+cd server
+npm run dev        # nodemon on port 4000
+```
+
+**Terminal 2 — Frontend:**
+
+```bash
+cd client
+npm run dev        # Vite on port 5173
 ```
 
 Open **http://localhost:5173**
 
 ---
 
-## Navigating the Portals
+## Authentication
 
-The fastest way to navigate between portals is the built-in role switcher:
+All portals share a single login page at `/login`. The backend returns a JWT whose `role` field determines where you land:
 
-**http://localhost:5173/dev/switcher**
+| Role | Login redirect |
+|---|---|
+| `GUEST` | `/guest/dashboard` |
+| `STAFF` | `/staff/reservations` |
+| `HOUSEKEEPER` | `/housekeeper/tasks` |
+| `HOTEL_ADMIN` | `/admin/rooms` |
+| `SUPER_ADMIN` | `/superadmin/tenants` |
 
-Click any role to set your session and jump directly to that portal. No login credentials needed.
-
----
-
-### URL Reference
-
-#### Super Admin
-
-| Screen             | URL                       |
-| ------------------ | ------------------------- |
-| Tenant Management  | /superadmin/tenants       |
-| Platform Analytics | /superadmin/analytics     |
-| Onboard New Hotel  | /superadmin/onboard       |
-| Subscription Plans | /superadmin/subscriptions |
-
-#### Hotel Admin
-
-| Screen              | URL              |
-| ------------------- | ---------------- |
-| Room Management     | /admin/rooms     |
-| Staff Management    | /admin/staff     |
-| Dynamic Pricing     | /admin/pricing   |
-| Analytics Dashboard | /admin/analytics |
-| Parking Management  | /admin/parking   |
-
-#### Staff
-
-| Screen                | URL                 |
-| --------------------- | ------------------- |
-| Reservation Dashboard | /staff/dashboard    |
-| Reservation List      | /staff/reservations |
-| Room Status Grid      | /staff/rooms        |
-| Housekeeping Override | /staff/housekeeping |
-
-#### Housekeeper
-
-| Screen     | URL                |
-| ---------- | ------------------ |
-| Task Board | /housekeeper/tasks |
-
-#### Guest
-
-| Screen             | URL                 |
-| ------------------ | ------------------- |
-| Landing            | /                   |
-| Room Browsing      | /rooms              |
-| Room Detail        | /rooms/:id          |
-| Check Availability | /rooms/availability |
-| Parking Map        | /parking            |
-| Sunbed Map         | /sunbeds            |
-| Marketplace        | /marketplace        |
-| Guest Dashboard    | /guest/dashboard    |
+Demo credentials are created by the seed script (`npm run seed` in `/server`).
 
 ---
 
-## Demo Highlights
+## URL Reference
 
-**Tenant Management** (`/superadmin/tenants`)
+### Guest Portal (requires `GUEST` JWT)
 
-- Filter by plan and status, search by name or subdomain
-- Approve pending tenants, suspend/reactivate, change plans, delete with confirmation
+| Screen | URL |
+|---|---|
+| Landing | `/` |
+| Room Browsing | `/rooms` |
+| Room Detail | `/rooms/:id` |
+| Check Availability | `/rooms/availability` |
+| Reservation Flow | `/reservation/:roomId` |
+| Parking Map | `/parking` |
+| Sunbed Map | `/sunbeds` |
+| Marketplace | `/marketplace` |
+| Dashboard | `/guest/dashboard` |
 
-**Onboard Hotel** (`/superadmin/onboard`)
+### Staff Portal (requires `STAFF` JWT)
 
-- Hotel name auto-generates the subdomain slug
-- Duplicate subdomain validation
+| Screen | URL |
+|---|---|
+| Reservation Dashboard | `/staff/dashboard` |
+| Reservation List | `/staff/reservations` |
+| Room Status Grid | `/staff/rooms` |
+| Housekeeping Override | `/staff/housekeeping` |
 
-**Dynamic Pricing** (`/admin/pricing`)
+### Housekeeper Portal (requires `HOUSEKEEPER` JWT)
 
-- Toggle rules on/off — price table updates live
-- Set occupancy threshold to 33% to trigger the active state
+| Screen | URL |
+|---|---|
+| Task Board | `/housekeeper/tasks` |
 
-**Parking Management** (`/admin/parking`)
+### Hotel Admin Portal (requires `HOTEL_ADMIN` JWT)
 
-- Grid view: click any spot to cycle its status
-- Table view: add, edit, remove spots
+| Screen | URL |
+|---|---|
+| Room Management | `/admin/rooms` |
+| Staff Management | `/admin/staff` |
+| Dynamic Pricing | `/admin/pricing` |
+| Analytics Dashboard | `/admin/analytics` |
+| Parking Management | `/admin/parking` |
 
-**Reservation Dashboard** (`/staff/dashboard`)
+### Super Admin Portal (requires `SUPER_ADMIN` JWT)
 
-- Confirm pending → check in → check out workflow
-- KPI cards update with every action
+| Screen | URL |
+|---|---|
+| Tenant Management | `/superadmin/tenants` |
+| Platform Analytics | `/superadmin/analytics` |
+| Onboard New Hotel | `/superadmin/onboard` |
+| Subscription Plans | `/superadmin/subscriptions` |
+
+---
+
+## API
+
+The backend runs at `http://localhost:4000`. Every request must include:
+
+```
+Content-Type: application/json
+X-Tenant-Subdomain: grandtirana
+Authorization: Bearer <jwt>   (all protected routes)
+```
+
+Key route groups: `/api/auth`, `/api/rooms`, `/api/reservations`, `/api/parking`, `/api/sunbeds`, `/api/services`, `/api/orders`, `/api/housekeeping`, `/api/staff`, `/api/pricing/rules`, `/api/analytics/summary`, `/api/superadmin`
 
 ---
 
@@ -126,19 +181,27 @@ Click any role to set your session and jump directly to that portal. No login cr
 
 ```
 reservio/
-├── client/                  # Frontend (React + Vite)
+├── client/                        # Frontend (React + Vite)
 │   ├── src/
-│   │   ├── components/      # Shared UI (Sidebar, Modal, PageHeader, StatusBadge, …)
-│   │   ├── context/         # ThemeContext (light/dark)
-│   │   ├── data/            # Mock data (mockRooms, mockReservations, …)
-│   │   ├── hooks/           # useAuth, useTenant
-│   │   ├── layouts/         # GuestLayout, PortalLayout, per-role wrappers
-│   │   └── pages/           # guest/ staff/ housekeeper/ admin/ superadmin/ dev/
-│   ├── tailwind.config.js   # rv- design token definitions
-│   └── index.html
-├── docs/
-│   ├── design/              # Figma screens
-│   └── requirements/        # SRS and user stories (PDF)
+│   │   ├── api/                   # API modules (client.js + one file per domain)
+│   │   ├── components/            # Shared UI: Sidebar, Modal, ProtectedRoute, …
+│   │   ├── context/               # AuthContext (JWT), ThemeContext
+│   │   ├── data/                  # Legacy mock data (kept as fallback)
+│   │   ├── hooks/                 # useAuth (re-exports AuthContext), useTenant
+│   │   ├── layouts/               # GuestLayout, AdminLayout, …
+│   │   └── pages/                 # guest/ staff/ housekeeper/ admin/ superadmin/
+│   ├── .env.example
+│   └── tailwind.config.js
+├── server/                        # Backend (Node.js + Express + Prisma)
+│   ├── src/
+│   │   ├── routes/                # One file per domain, mirrors client/src/api/
+│   │   ├── middleware/            # tenantResolver, auth
+│   │   ├── services/              # Business logic
+│   │   └── index.js               # Express entry point (port 4000)
+│   ├── prisma/
+│   │   ├── schema.prisma          # PostgreSQL schema
+│   │   └── seed.js                # Demo data seed
+│   └── .env.example
 └── README.md
 ```
 
@@ -146,18 +209,19 @@ reservio/
 
 ## Tech Stack
 
-| Layer              | Technology                                       |
-| ------------------ | ------------------------------------------------ |
-| Frontend           | React 18, React Router v6                        |
-| Build              | Vite                                             |
-| Styling            | Tailwind CSS with CSS variable theme tokens      |
-| State              | React useState + Context (mock data, no backend) |
-| Backend (planned)  | Node.js, Express, PostgreSQL, Prisma             |
-| Auth (planned)     | JWT                                              |
-| Realtime (planned) | Socket.io                                        |
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, React Router v6 |
+| Build | Vite |
+| Styling | Tailwind CSS with `rv-*` CSS variable design tokens |
+| Auth | JWT (decoded client-side, no library) |
+| Backend | Node.js, Express |
+| ORM | Prisma |
+| Database | PostgreSQL |
+| Realtime | Socket.io (server wired, client planned) |
 
 ---
 
 ## Team
 
-Orest Paja, Licern Beqiri, Jorida Vrusho, Eleana Zharkalli, Ina Ndoni, Joni Begaj, Klea Hila
+Orest Paja · Licern Beqiri · Jorida Vrusho · Eleana Zharkalli · Ina Ndoni · Joni Begaj · Klea Hila
