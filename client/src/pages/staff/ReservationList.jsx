@@ -3,8 +3,19 @@ import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import { getReservations, updateReservationStatus } from '../../api/reservations';
 
-const STATUSES = ['All', 'Pending', 'Confirmed', 'CheckedIn', 'CheckedOut', 'PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'];
 const FILTER_STATUSES = ['All', 'Pending', 'Confirmed', 'CheckedIn', 'CheckedOut'];
+
+const DATE_PRESETS = ['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days'];
+
+function presetRange(label) {
+  const now = new Date();
+  const startOf = (d) => { d.setHours(0,0,0,0); return d; };
+  if (label === 'Today')      { const s = startOf(new Date()); return [s, new Date()]; }
+  if (label === 'Yesterday')  { const s = startOf(new Date(now - 86400000)); const e = new Date(s); e.setHours(23,59,59,999); return [s, e]; }
+  if (label === 'Last 7 Days'){ return [new Date(now - 7*86400000), new Date()]; }
+  if (label === 'Last 30 Days'){ return [new Date(now - 30*86400000), new Date()]; }
+  return [null, null];
+}
 
 const ACTIONS = {
   Pending:    { label: 'Confirm',   next: 'CONFIRMED'  },
@@ -20,6 +31,7 @@ export default function ReservationList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [datePreset, setDatePreset] = useState('');
   const [search, setSearch] = useState('');
   const [transitioning, setTransitioning] = useState(null);
 
@@ -31,10 +43,37 @@ export default function ReservationList() {
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = reservations.filter((r) =>
-    (statusFilter === 'All' || r.status === statusFilter || r.status?.toLowerCase() === statusFilter.toLowerCase()) &&
-    (!search || r.guestName?.toLowerCase().includes(search.toLowerCase())),
-  );
+  function getGuestName(r) {
+    return r.guest?.fullName ?? r.guestName ?? '—';
+  }
+
+  function getRoomLabel(r) {
+    if (r.room?.type && r.room?.description) return `${r.room.type} — ${r.room.description}`;
+    if (r.roomType) return r.roomType;
+    return `Room #${r.roomId ?? '?'}`;
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  const [dateFrom, dateTo] = datePreset ? presetRange(datePreset) : [null, null];
+
+  const filtered = reservations.filter((r) => {
+    if (statusFilter !== 'All' && r.status !== statusFilter && r.status?.toLowerCase() !== statusFilter.toLowerCase()) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = getGuestName(r).toLowerCase().includes(q);
+      const roomMatch = getRoomLabel(r).toLowerCase().includes(q);
+      if (!nameMatch && !roomMatch) return false;
+    }
+    if (dateFrom && dateTo) {
+      const ci = new Date(r.checkIn);
+      if (ci < dateFrom || ci > dateTo) return false;
+    }
+    return true;
+  });
 
   async function transition(id, next) {
     setTransitioning(id);
@@ -49,15 +88,32 @@ export default function ReservationList() {
   }
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader title="Reservations" subtitle="Manage all guest reservations." />
+
+      {/* Quick date filter */}
+      <div className="mb-3 flex flex-wrap gap-1">
+        {DATE_PRESETS.map((p) => (
+          <button
+            key={p}
+            onClick={() => setDatePreset(datePreset === p ? '' : p)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              datePreset === p
+                ? 'bg-rv-olive-600 text-white'
+                : 'border border-rv-border2 text-rv-muted hover:text-rv-text'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search guest…"
+          placeholder="Search guest or room…"
           className="rounded-lg border border-rv-border2 bg-rv-surface px-3 py-2 text-sm text-rv-text placeholder:text-rv-subtle outline-none focus:ring-2 focus:ring-rv-accent/40"
         />
         <div className="flex flex-wrap gap-1">
@@ -101,11 +157,11 @@ export default function ReservationList() {
                 const action = ACTIONS[r.status];
                 return (
                   <tr key={r.id} className="transition hover:bg-rv-surface2">
-                    <td className="px-5 py-3 text-rv-subtle">#{r.id}</td>
-                    <td className="px-5 py-3 font-medium text-rv-text">{r.guestName}</td>
-                    <td className="px-5 py-3 text-rv-muted">{r.roomType || `Room #${r.roomId}`}</td>
-                    <td className="px-5 py-3 text-rv-muted">{r.checkIn}</td>
-                    <td className="px-5 py-3 text-rv-muted">{r.checkOut}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-rv-subtle">RES-{r.id?.slice(0, 8).toUpperCase()}</td>
+                    <td className="px-5 py-3 font-medium text-rv-text">{getGuestName(r)}</td>
+                    <td className="px-5 py-3 text-rv-muted">{getRoomLabel(r)}</td>
+                    <td className="px-5 py-3 text-rv-muted">{fmtDate(r.checkIn)}</td>
+                    <td className="px-5 py-3 text-rv-muted">{fmtDate(r.checkOut)}</td>
                     <td className="px-5 py-3"><StatusBadge status={r.status} /></td>
                     <td className="px-5 py-3">
                       {action && (

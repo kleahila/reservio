@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { apiCall } from "../api/client";
 
 const FEATURES = [
   {
@@ -40,7 +42,54 @@ const FEATURES = [
   },
 ];
 
+const PLANS = [
+  {
+    name: 'Starter',
+    price: '$49',
+    period: '/month',
+    features: ['Up to 20 rooms', 'Staff portal', 'Basic analytics', 'Email support'],
+    cta: 'Get started',
+    highlight: false,
+  },
+  {
+    name: 'Premium',
+    price: '$149',
+    period: '/month',
+    features: ['Unlimited rooms', 'All portals + technician', 'Dynamic pricing', 'Maintenance board', 'Priority support'],
+    cta: 'Start free trial',
+    highlight: true,
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    period: '',
+    features: ['Everything in Premium', 'Custom integrations', 'Dedicated account manager', 'SLA guarantee'],
+    cta: 'Contact sales',
+    highlight: false,
+  },
+];
+
 export default function Landing() {
+  const [hotels, setHotels] = useState([]);
+  const [showDemo, setShowDemo] = useState(null);
+
+  useEffect(() => {
+    apiCall('GET', '/api/public/tenants', undefined, false)
+      .then((data) => {
+        const sorted = (data || []).sort((a, b) => {
+          if (a.plan === 'PREMIUM' && b.plan !== 'PREMIUM') return -1;
+          if (b.plan === 'PREMIUM' && a.plan !== 'PREMIUM') return 1;
+          return 0;
+        });
+        setHotels(sorted);
+      })
+      .catch(() => {});
+  }, []);
+
+  function selectHotel(subdomain) {
+    localStorage.setItem('rv_tenant', subdomain);
+  }
+
   return (
     <div className="min-h-screen bg-rv-bg">
       {/* Nav */}
@@ -120,6 +169,107 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Browse Hotels */}
+      {hotels.length > 0 && (
+        <section className="border-t border-rv-border">
+          <div className="mx-auto max-w-6xl px-4 py-20 md:px-6">
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-rv-accent">Browse Hotels</h2>
+            <p className="mb-10 text-2xl font-bold text-rv-text">Find your perfect stay.</p>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {hotels.map((h) => (
+                <div key={h.id} className="rounded-xl border border-rv-border bg-rv-bg p-6 flex flex-col gap-3 transition hover:border-rv-border2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-rv-text">{h.name}</h3>
+                      <p className="text-xs text-rv-muted mt-0.5">{h.subdomain}.reservio.com</p>
+                    </div>
+                    {h.plan === 'PREMIUM' && (
+                      <span className="rounded-full bg-rv-warning-soft px-2.5 py-0.5 text-xs font-semibold text-rv-warning">Premium</span>
+                    )}
+                  </div>
+                  {h._count?.rooms != null && (
+                    <p className="text-xs text-rv-muted">{h._count.rooms} rooms available</p>
+                  )}
+                  <Link
+                    to="/rooms"
+                    onClick={() => selectHotel(h.subdomain)}
+                    className="mt-auto inline-block rounded-lg bg-rv-accent px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-rv-accent/90"
+                  >
+                    Browse rooms
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Pricing */}
+      <section className="border-t border-rv-border bg-rv-surface">
+        <div className="mx-auto max-w-6xl px-4 py-20 md:px-6">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-rv-accent">Pricing</h2>
+          <p className="mb-12 text-2xl font-bold text-rv-text">Simple, transparent pricing.</p>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-xl border p-6 flex flex-col gap-4 ${
+                  plan.highlight
+                    ? 'border-rv-accent bg-rv-accent-soft'
+                    : 'border-rv-border bg-rv-bg'
+                }`}
+              >
+                <div>
+                  <h3 className="font-bold text-rv-text">{plan.name}</h3>
+                  <div className="mt-2 flex items-end gap-1">
+                    <span className="text-3xl font-bold text-rv-text">{plan.price}</span>
+                    {plan.period && <span className="text-sm text-rv-muted mb-1">{plan.period}</span>}
+                  </div>
+                </div>
+                <ul className="flex-1 space-y-2">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-rv-muted">
+                      <svg className="mt-0.5 shrink-0 text-rv-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => setShowDemo(plan.name)}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    plan.highlight
+                      ? 'bg-rv-accent text-white hover:bg-rv-accent/90'
+                      : 'border border-rv-border2 text-rv-text hover:bg-rv-surface2'
+                  }`}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing demo modal */}
+      {showDemo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-rv-border bg-rv-surface p-6 shadow-xl">
+            <h3 className="mb-2 font-semibold text-rv-text">{showDemo} Plan</h3>
+            <p className="mb-4 text-sm text-rv-muted">
+              This is a demo platform. To get started with <strong>{showDemo}</strong>, use the hotel signup form.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDemo(null)} className="flex-1 rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Close</button>
+              <Link to="/hotel-signup" onClick={() => setShowDemo(null)} className="flex-1 rounded-lg bg-rv-accent px-4 py-2 text-center text-sm font-semibold text-white hover:bg-rv-accent/90">
+                Sign up
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CTA strip */}
       <section className="border-t border-rv-border">

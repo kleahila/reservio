@@ -3,57 +3,87 @@ import { Link } from 'react-router-dom';
 import StatusBadge from '../../components/StatusBadge';
 import { getRooms } from '../../api/rooms';
 
-const STATUSES = ['All', 'Available', 'Occupied', 'Maintenance'];
+function floorFromDescription(description) {
+  const num = parseInt(description?.replace(/\D/g, '') || '0', 10);
+  if (num >= 400) return 4;
+  if (num >= 300) return 3;
+  if (num >= 200) return 2;
+  return 1;
+}
+
+const FLOOR_LABELS = { 1: 'Floor 1', 2: 'Floor 2', 3: 'Floor 3', 4: 'Floor 4 – Penthouse' };
 
 export default function RoomBrowsing() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('All');
+  const [activeFloor, setActiveFloor] = useState('all');
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     getRooms()
-      .then((data) => { if (!cancelled) { setRooms(data || []); setLoading(false); } })
+      .then((data) => {
+        if (!cancelled) {
+          const available = (data || []).filter((r) => r.status === 'AVAILABLE');
+          setRooms(available);
+          setLoading(false);
+        }
+      })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false); } });
     return () => { cancelled = true; };
   }, []);
 
-  const visible = filter === 'All' ? rooms : rooms.filter((r) => r.status === filter);
+  const floors = [...new Set(rooms.map((r) => floorFromDescription(r.description)))].sort();
+
+  const visible =
+    activeFloor === 'all'
+      ? rooms
+      : rooms.filter((r) => floorFromDescription(r.description) === activeFloor);
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-rv-text">Browse Rooms</h1>
-        <p className="mt-1 text-rv-muted">{rooms.length} rooms available across all categories.</p>
+        <h1 className="font-serif text-3xl font-bold text-rv-text">Browse Rooms</h1>
+        <p className="mt-1 text-rv-muted">{rooms.length} available rooms across all floors.</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {STATUSES.map((s) => (
+      {!loading && !error && floors.length > 0 && (
+        <div className="flex flex-wrap gap-2">
           <button
-            key={s}
-            onClick={() => setFilter(s)}
+            onClick={() => setActiveFloor('all')}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              filter === s
-                ? 'bg-rv-accent text-white'
+              activeFloor === 'all'
+                ? 'bg-rv-olive-600 text-white'
                 : 'border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text'
             }`}
           >
-            {s}
+            All floors
           </button>
-        ))}
-        <Link
-          to="/rooms/availability"
-          className="ml-auto rounded-full border border-rv-border2 bg-rv-surface px-4 py-1.5 text-sm font-medium text-rv-muted transition hover:text-rv-text"
-        >
-          Check availability
-        </Link>
-      </div>
+          {floors.map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFloor(f)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                activeFloor === f
+                  ? 'bg-rv-olive-600 text-white'
+                  : 'border border-rv-border2 bg-rv-surface text-rv-muted hover:text-rv-text'
+              }`}
+            >
+              {FLOOR_LABELS[f] ?? `Floor ${f}`}
+            </button>
+          ))}
 
-      {loading && (
-        <div className="py-12 text-center text-rv-muted">Loading rooms…</div>
+          <Link
+            to="/rooms/availability"
+            className="ml-auto rounded-full border border-rv-border2 bg-rv-surface px-4 py-1.5 text-sm font-medium text-rv-muted transition hover:text-rv-text"
+          >
+            Check availability
+          </Link>
+        </div>
       )}
+
+      {loading && <div className="py-12 text-center text-rv-muted">Loading rooms…</div>}
 
       {error && (
         <div className="rounded-xl border border-rv-danger/20 bg-rv-danger-soft px-5 py-4 text-sm text-rv-danger">
@@ -63,48 +93,64 @@ export default function RoomBrowsing() {
 
       {!loading && !error && visible.length === 0 && (
         <div className="rounded-xl border border-rv-border bg-rv-surface p-12 text-center text-rv-muted">
-          No rooms match this filter.
+          No rooms available on this floor.
         </div>
       )}
 
       {!loading && !error && visible.length > 0 && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visible.map((room) => (
-            <div
-              key={room.id}
-              className="flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm transition hover:border-rv-border2 hover:shadow-md"
-            >
-              {room.photos?.[0] && (
-                <img src={room.photos[0]} alt={room.type} className="h-44 w-full object-cover" />
-              )}
-              <div className="flex flex-1 flex-col p-4">
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-rv-text">{room.type}</h3>
-                  <StatusBadge status={room.status} />
+        <div className="space-y-10">
+          {(activeFloor === 'all' ? floors : [activeFloor]).map((floor) => {
+            const group = visible.filter((r) => floorFromDescription(r.description) === floor);
+            if (group.length === 0) return null;
+            return (
+              <section key={floor}>
+                <h2 className="mb-4 flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-rv-muted">
+                  <span>{FLOOR_LABELS[floor] ?? `Floor ${floor}`}</span>
+                  <span className="h-px flex-1 bg-rv-border" />
+                  <span className="font-normal normal-case">{group.length} room{group.length !== 1 ? 's' : ''}</span>
+                </h2>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {group.map((room) => (
+                    <div
+                      key={room.id}
+                      className="room-tile flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm"
+                    >
+                      {room.photos?.[0] && (
+                        <img src={room.photos[0]} alt={room.type} className="h-44 w-full object-cover" />
+                      )}
+                      <div className="flex flex-1 flex-col p-4">
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-rv-text">{room.type}</h3>
+                            <p className="text-xs text-rv-muted">Room {room.description}</p>
+                          </div>
+                          <StatusBadge status={room.status} />
+                        </div>
+                        {room.averageRating > 0 && (
+                          <div className="flex items-center gap-1 mb-2">
+                            <span className="text-xs text-rv-warning">{'★'.repeat(Math.round(room.averageRating))}{'☆'.repeat(5 - Math.round(room.averageRating))}</span>
+                            <span className="text-xs text-rv-muted">{room.averageRating.toFixed(1)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between border-t border-rv-border pt-3 mt-auto">
+                          <span className="text-sm font-bold text-rv-text">
+                            ${room.pricePerNight}
+                            <span className="text-xs font-normal text-rv-muted">/night</span>
+                          </span>
+                          <Link
+                            to={`/rooms/${room.id}`}
+                            className="rounded-lg bg-rv-olive-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rv-olive-700"
+                          >
+                            View &amp; Book
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="mb-4 flex-1 text-sm leading-relaxed text-rv-muted line-clamp-2">
-                  {room.description}
-                </p>
-                <div className="flex items-center justify-between border-t border-rv-border pt-3">
-                  <span className="text-sm font-bold text-rv-text">
-                    ${room.pricePerNight}
-                    <span className="text-xs font-normal text-rv-muted">/night</span>
-                  </span>
-                  <Link
-                    to={`/reservation/${room.id}`}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      room.status === 'Available'
-                        ? 'bg-rv-accent text-white hover:bg-rv-accent/90'
-                        : 'cursor-not-allowed bg-rv-surface2 text-rv-muted'
-                    }`}
-                    onClick={room.status !== 'Available' ? (e) => e.preventDefault() : undefined}
-                  >
-                    {room.status === 'Available' ? 'Reserve' : 'Unavailable'}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

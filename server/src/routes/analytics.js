@@ -4,7 +4,7 @@ const roleGuard = require('../middleware/roleGuard');
 const featureGate = require('../middleware/featureGate');
 const { getTenantClient } = require('../prisma/tenantClient');
 
-const guard = [authMiddleware, featureGate('PREMIUM'), roleGuard('HOTEL_ADMIN')];
+const guard = [authMiddleware, featureGate('PREMIUM'), roleGuard('HOTEL_ADMIN', 'MANAGER')];
 
 router.get('/summary', ...guard, async (req, res) => {
   const { startDate, endDate } = req.query;
@@ -64,6 +64,46 @@ router.get('/export', ...guard, async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="reservations.csv"');
     res.send(header + rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/calendar', ...guard, async (req, res) => {
+  const { year, month } = req.query;
+  const db = getTenantClient(req.tenant.id);
+  try {
+    const y = parseInt(year) || new Date().getFullYear();
+    const m = parseInt(month) || (new Date().getMonth() + 1);
+    const daysInMonth = new Date(y, m, 0).getDate();
+
+    const startOfMonth = new Date(y, m - 1, 1);
+    const endOfMonth = new Date(y, m, 0, 23, 59, 59);
+
+    const totalRooms = await db.room.count();
+
+    const result = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(y, m - 1, d);
+      const dateStr = date.toISOString().slice(0, 10);
+
+      const reservations = await db.reservation.findMany({
+        where: {
+          status: { in: ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'] },
+          checkIn: { lte: new Date(y, m - 1, d, 23, 59) },
+          checkOut: { gte: new Date(y, m - 1, d, 0, 0) },
+        },
+        select: { id: true },
+      });
+
+      const occupancyPercent = totalRooms > 0
+        ? Math.round((reservations.length / totalRooms) * 100)
+        : 0;
+
+      result.push({ date: dateStr, occupancyPercent, reservationCount: reservations.length });
+    }
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

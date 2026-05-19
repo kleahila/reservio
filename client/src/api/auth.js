@@ -7,3 +7,7 @@ export function login(email, password) {
 export function register(fullName, email, password) {
   return apiCall('POST', '/api/auth/register', { fullName, email, password }, false);
 }
+
+export function getMe() {
+  return apiCall('GET', '/api/auth/me', undefined, true);
+}

@@ -3,15 +3,18 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const input = (err) =>
-  `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-surface text-rv-text placeholder:text-rv-subtle outline-none transition focus:ring-2 focus:ring-rv-accent/40 ${
+  `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-surface text-rv-text placeholder:text-rv-subtle outline-none transition focus:ring-2 focus:ring-rv-olive-400/40 ${
     err ? 'border-rv-danger' : 'border-rv-border2'
   }`;
 
 const ROLE_REDIRECT = {
   GUEST:       '/guest/dashboard',
   STAFF:       '/staff/reservations',
+  RECEPTIONIST: '/staff/reservations',
+  MANAGER:     '/staff/reservations',
   HOUSEKEEPER: '/housekeeper/tasks',
-  HOTEL_ADMIN: '/admin/rooms',
+  TECHNICIAN:  '/technician/tasks',
+  HOTEL_ADMIN: '/admin/command-center',
   SUPER_ADMIN: '/superadmin/tenants',
 };
 
@@ -94,10 +97,12 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-5 text-center text-xs text-rv-muted">
-            No account?{' '}
-            <Link to="/register" className="font-medium text-rv-accent hover:underline">Create one</Link>
-          </p>
+          <div className="mt-5 flex items-center justify-between text-xs text-rv-muted">
+            <Link to="/forgot-password" className="font-medium text-rv-sea-500 hover:underline">Forgot password?</Link>
+            <span>No account?{' '}
+              <Link to="/register" className="font-medium text-rv-sea-500 hover:underline">Create one</Link>
+            </span>
+          </div>
         </div>
       </div>
     </div>

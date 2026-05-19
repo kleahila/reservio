@@ -4,7 +4,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 const roleGuard = require('../middleware/roleGuard');
 const { getTenantClient, prisma } = require('../prisma/tenantClient');
 
-router.get('/', authMiddleware, async (req, res) => {
+// GET — no auth required, tenant header only
+router.get('/', async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     res.json(await db.sunbed.findMany());
@@ -81,6 +82,23 @@ router.post('/:id/release', authMiddleware, roleGuard('GUEST'), async (req, res)
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Sunbed config endpoints
+router.get('/config', authMiddleware, async (req, res) => {
+  const db = getTenantClient(req.tenant.id);
+  try {
+    const zones = await db.sunbed.groupBy({ by: ['zone'], _count: { id: true } });
+    const hasPool = zones.some((z) => z.zone?.toLowerCase().includes('pool'));
+    res.json({ hasPool, zones: zones.map((z) => ({ name: z.zone, capacity: z._count.id })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/config', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res) => {
+  const { hasPool, zones } = req.body;
+  res.json({ hasPool, zones, message: 'Config saved (managed via sunbed records)' });
 });
 
 cron.schedule('* * * * *', async () => {

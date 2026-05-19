@@ -24,6 +24,8 @@ import SunbedMap from './pages/guest/SunbedMap';
 import Marketplace from './pages/guest/Marketplace';
 import Notifications from './pages/guest/Notifications';
 import GuestDashboard from './pages/guest/Dashboard';
+import Checkout from './pages/guest/Checkout';
+import Profile from './pages/guest/Profile';
 import HotelSignup from './pages/HotelSignup';
 
 // ── STAFF PORTAL ──────────────────────────────────────────────────────────────
@@ -32,6 +34,8 @@ import ReservationDashboard from './pages/staff/ReservationDashboard';
 import ReservationList from './pages/staff/ReservationList';
 import RoomStatusGrid from './pages/staff/RoomStatusGrid';
 import HousekeepingOverride from './pages/staff/HousekeepingOverride';
+import CheckIn from './pages/staff/CheckIn';
+import CheckOut from './pages/staff/CheckOut';
 
 // ── HOUSEKEEPER PORTAL ────────────────────────────────────────────────────────
 import HousekeeperLogin from './pages/housekeeper/HousekeeperLogin';
@@ -44,6 +48,17 @@ import StaffManagement from './pages/admin/StaffManagement';
 import DynamicPricing from './pages/admin/DynamicPricing';
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 import ParkingManagement from './pages/admin/ParkingManagement';
+import StaffHours from './pages/admin/StaffHours';
+import MaintenanceBoard from './pages/admin/MaintenanceBoard';
+import GuestList from './pages/admin/GuestList';
+import OccupancyCalendar from './pages/admin/OccupancyCalendar';
+import CommandCenter from './pages/admin/CommandCenter';
+import AdminActivityLog from './pages/admin/ActivityLog';
+import SunbedsConfig from './pages/admin/SunbedsConfig';
+
+// ── TECHNICIAN PORTAL ─────────────────────────────────────────────────────────
+import TechnicianLayout from './layouts/TechnicianLayout';
+import TechnicianTasks from './pages/technician/TechnicianTasks';
 
 // ── SUPER ADMIN PORTAL ────────────────────────────────────────────────────────
 import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
@@ -51,6 +66,11 @@ import TenantManagement from './pages/superadmin/TenantManagement';
 import SubscriptionPlans from './pages/superadmin/SubscriptionPlans';
 import PlatformAnalytics from './pages/superadmin/PlatformAnalytics';
 import OnboardHotel from './pages/superadmin/OnboardHotel';
+import PlatformStatus from './pages/superadmin/PlatformStatus';
+import SuperAdminActivityLog from './pages/superadmin/ActivityLog';
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+import ForgotPassword from './pages/guest/ForgotPassword';
 
 // ── DEV ───────────────────────────────────────────────────────────────────────
 import RoleSwitcher from './pages/dev/RoleSwitcher';
@@ -63,6 +83,7 @@ export default function App() {
       <Route path="/hotel-signup" element={<HotelSignup />} />
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Public room browsing */}
@@ -82,20 +103,32 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={['GUEST']} />}>
         <Route element={<GuestLayout />}>
           <Route path="/reservation/:roomId" element={<ReservationFlow />} />
-          <Route path="/parking" element={<ParkingMap />} />
-          <Route path="/sunbeds" element={<SunbedMap />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/guest/dashboard" element={<GuestDashboard />} />
+          <Route path="/guest/checkout"     element={<Checkout />} />
+          <Route path="/guest/profile"      element={<Profile />} />
+          <Route path="/parking"            element={<ParkingMap />} />
+          <Route path="/sunbeds"            element={<SunbedMap />} />
+          <Route path="/marketplace"        element={<Marketplace />} />
+          <Route path="/notifications"      element={<Notifications />} />
+          <Route path="/guest/dashboard"    element={<GuestDashboard />} />
+        </Route>
+      </Route>
+
+      {/* ── TECHNICIAN PORTAL ────────────────────────────────────────────── */}
+      <Route element={<ProtectedRoute allowedRoles={['TECHNICIAN']} />}>
+        <Route path="/technician" element={<TechnicianLayout />}>
+          <Route path="tasks" element={<TechnicianTasks />} />
         </Route>
       </Route>
 
       {/* ── STAFF PORTAL ─────────────────────────────────────────────────── */}
-      <Route element={<ProtectedRoute allowedRoles={['STAFF']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER']} />}>
         <Route path="/staff" element={<StaffLayout />}>
           <Route path="dashboard"    element={<ReservationDashboard />} />
           <Route path="reservations" element={<ReservationList />} />
+          <Route path="checkin"      element={<CheckIn />} />
+          <Route path="checkout"     element={<CheckOut />} />
           <Route path="rooms"        element={<RoomStatusGrid />} />
+          <Route path="room-status"  element={<RoomStatusGrid />} />
           <Route path="housekeeping" element={<HousekeepingOverride />} />
         </Route>
       </Route>
@@ -110,12 +143,19 @@ export default function App() {
       {/* ── HOTEL ADMIN PORTAL ───────────────────────────────────────────── */}
       <Route element={<ProtectedRoute allowedRoles={['HOTEL_ADMIN']} />}>
         <Route path="/admin" element={<AdminLayout />}>
-          <Route path="dashboard" element={<Navigate to="/admin/rooms" replace />} />
-          <Route path="rooms"     element={<RoomManagement />} />
-          <Route path="staff"     element={<StaffManagement />} />
-          <Route path="pricing"   element={<DynamicPricing />} />
-          <Route path="analytics" element={<AnalyticsDashboard />} />
-          <Route path="parking"   element={<ParkingManagement />} />
+          <Route path="dashboard"      element={<Navigate to="/admin/command-center" replace />} />
+          <Route path="command-center" element={<CommandCenter />} />
+          <Route path="rooms"          element={<RoomManagement />} />
+          <Route path="staff"          element={<StaffManagement />} />
+          <Route path="pricing"        element={<DynamicPricing />} />
+          <Route path="analytics"      element={<AnalyticsDashboard />} />
+          <Route path="parking"        element={<ParkingManagement />} />
+          <Route path="staff-hours"    element={<StaffHours />} />
+          <Route path="maintenance"    element={<MaintenanceBoard />} />
+          <Route path="guests"         element={<GuestList />} />
+          <Route path="calendar"       element={<OccupancyCalendar />} />
+          <Route path="activity"       element={<AdminActivityLog />} />
+          <Route path="sunbeds"        element={<SunbedsConfig />} />
         </Route>
       </Route>
 
@@ -126,6 +166,8 @@ export default function App() {
           <Route path="subscriptions" element={<SubscriptionPlans />} />
           <Route path="analytics"     element={<PlatformAnalytics />} />
           <Route path="onboard"       element={<OnboardHotel />} />
+          <Route path="status"        element={<PlatformStatus />} />
+          <Route path="activity"      element={<SuperAdminActivityLog />} />
         </Route>
       </Route>
 

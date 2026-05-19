@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
-import { getStaff, createStaff, updateStaff, deactivateStaff } from '../../api/staff';
+import { getStaff, createStaff, updateStaff, deactivateStaff, deleteStaff } from '../../api/staff';
 
-const ROLES = ['STAFF', 'HOUSEKEEPER'];
+const ROLES = ['RECEPTIONIST', 'HOUSEKEEPER', 'TECHNICIAN', 'MANAGER'];
 
 const inputCls =
   'w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2.5 text-sm text-rv-text placeholder:text-rv-subtle outline-none focus:ring-2 focus:ring-rv-accent/40';
@@ -15,7 +15,8 @@ export default function StaffManagement() {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'STAFF' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'RECEPTIONIST' });
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -42,9 +43,20 @@ export default function StaffManagement() {
     return e;
   }
 
+  async function handleDelete(member) {
+    try {
+      await deleteStaff(member.id);
+      setStaff((s) => s.filter((m) => m.id !== member.id));
+      showToast(`${member.name ?? member.fullName} removed.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   function openAdd() {
     setEditTarget(null);
-    setForm({ name: '', email: '', role: 'STAFF' });
+    setForm({ name: '', email: '', role: 'RECEPTIONIST' });
     setErrors({});
     setShowModal(true);
   }
@@ -91,7 +103,7 @@ export default function StaffManagement() {
   }
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Staff Accounts"
         subtitle="Manage hotel staff members and housekeepers."
@@ -121,7 +133,7 @@ export default function StaffManagement() {
           <table className="min-w-full border-collapse text-left text-sm">
             <thead className="border-b border-rv-border">
               <tr className="text-xs font-semibold uppercase tracking-wider text-rv-muted">
-                {['Name', 'Email', 'Role', 'Status', 'Actions'].map((h) => (
+                {['Name', 'Username', 'Email', 'Role', 'Status', 'Actions'].map((h) => (
                   <th key={h} className="px-5 py-3">{h}</th>
                 ))}
               </tr>
@@ -129,29 +141,43 @@ export default function StaffManagement() {
             <tbody className="divide-y divide-rv-border">
               {staff.map((member) => (
                 <tr key={member.id} className="transition hover:bg-rv-surface2">
-                  <td className="px-5 py-3 font-medium text-rv-text">{member.name}</td>
+                  <td className="px-5 py-3 font-medium text-rv-text">{member.fullName ?? member.name}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-rv-muted">{member.username ?? '—'}</td>
                   <td className="px-5 py-3 text-rv-muted">{member.email}</td>
                   <td className="px-5 py-3 text-rv-muted">{member.role}</td>
-                  <td className="px-5 py-3"><StatusBadge status={member.status} /></td>
+                  <td className="px-5 py-3"><StatusBadge status={member.active === false ? 'Inactive' : (member.status ?? 'Active')} /></td>
                   <td className="px-5 py-3 flex gap-2">
                     <button onClick={() => openEdit(member)} className="rounded-lg border border-rv-border2 px-3 py-1.5 text-xs font-medium text-rv-muted hover:text-rv-text">
                       Edit
                     </button>
-                    {member.status === 'Active' && (
-                      <button onClick={() => handleDeactivate(member)} className="rounded-lg bg-rv-danger-soft px-3 py-1.5 text-xs font-semibold text-rv-danger hover:bg-rv-danger/20">
+                    {member.active !== false && member.status !== 'Inactive' && (
+                      <button onClick={() => handleDeactivate(member)} className="rounded-lg bg-rv-warning-soft px-3 py-1.5 text-xs font-semibold text-rv-warning hover:bg-rv-warning/20">
                         Deactivate
                       </button>
                     )}
+                    <button onClick={() => setDeleteTarget(member)} className="rounded-lg bg-rv-danger-soft px-3 py-1.5 text-xs font-semibold text-rv-danger hover:bg-rv-danger/20">
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
               {staff.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-8 text-center text-rv-muted">No staff members found.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-rv-muted">No staff members found.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
+
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Staff Member">
+        <p className="mb-5 text-sm text-rv-muted">
+          Permanently delete <strong className="text-rv-text">{deleteTarget?.fullName ?? deleteTarget?.name}</strong>? This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setDeleteTarget(null)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
+          <button onClick={() => handleDelete(deleteTarget)} className="rounded-lg bg-rv-danger px-4 py-2 text-sm font-semibold text-white hover:bg-rv-danger/90">Delete</button>
+        </div>
+      </Modal>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editTarget ? 'Edit staff member' : 'Add staff member'}>
         <form onSubmit={handleSubmit} noValidate className="space-y-4">

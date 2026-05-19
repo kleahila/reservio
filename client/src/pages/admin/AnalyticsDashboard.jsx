@@ -40,7 +40,7 @@ export default function AnalyticsDashboard() {
   const totalRooms = summary?.totalRooms ?? 0;
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Analytics"
         subtitle="Hotel performance overview. Use date range to filter."

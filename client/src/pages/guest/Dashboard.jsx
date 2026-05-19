@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import StatusBadge from '../../components/StatusBadge';
 import { useAuth } from '../../hooks/useAuth';
 import { getMyReservations } from '../../api/reservations';
+import { createReview } from '../../api/reviews';
 
 const QUICK_LINKS = [
   { to: '/rooms',         label: 'Browse Rooms' },
@@ -26,11 +27,31 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  const [reviewedIds, setReviewedIds] = useState([]);
+  const [ratingMap, setRatingMap] = useState({});
+  const [commentMap, setCommentMap] = useState({});
+  const [submittingReview, setSubmittingReview] = useState(null);
+
   const upcoming = reservations
     .filter((r) => r.status === 'Confirmed' || r.status === 'Pending' || r.status === 'CONFIRMED' || r.status === 'PENDING')
     .slice(0, 3);
 
+  const checkedOut = reservations.filter(
+    (r) => (r.status === 'CHECKED_OUT' || r.status === 'CheckedOut') && !reviewedIds.includes(r.id),
+  );
+
   const displayName = user?.fullName?.split(' ')[0] ?? 'Guest';
+
+  async function submitReview(res) {
+    const rating = ratingMap[res.id];
+    if (!rating) return;
+    setSubmittingReview(res.id);
+    try {
+      await createReview({ reservationId: res.id, roomId: res.roomId, rating, comment: commentMap[res.id] ?? '' });
+      setReviewedIds((prev) => [...prev, res.id]);
+    } catch { /* ignore */ }
+    finally { setSubmittingReview(null); }
+  }
 
   return (
     <div className="space-y-8">
@@ -83,8 +104,14 @@ export default function Dashboard() {
               >
                 <div>
                   <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-rv-subtle">RES-{res.id?.slice(0, 8).toUpperCase()}</span>
                     <span className="font-semibold text-rv-text">{res.roomType || `Room #${res.roomId}`}</span>
                     <StatusBadge status={res.status} />
+                    {res.breakfastIncluded && (
+                      <span className="rounded-full bg-rv-olive-100 px-2 py-0.5 text-xs font-medium text-rv-olive-700 dark:bg-rv-olive-900/30 dark:text-rv-olive-300">
+                        Breakfast
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-rv-muted">
                     {res.checkIn} &rarr; {res.checkOut}
@@ -101,6 +128,48 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {/* Rate your stay */}
+      {checkedOut.length > 0 && (
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-rv-text">Rate Your Stay</h2>
+          <div className="space-y-3">
+            {checkedOut.map((res) => (
+              <div key={res.id} className="rounded-xl border border-rv-border bg-rv-surface p-5 space-y-3">
+                <div>
+                  <p className="font-semibold text-rv-text">{res.roomType || `Room #${res.roomId}`}</p>
+                  <p className="text-xs text-rv-muted">{res.checkIn} → {res.checkOut}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRatingMap((m) => ({ ...m, [res.id]: star }))}
+                      className={`text-xl transition ${(ratingMap[res.id] ?? 0) >= star ? 'text-rv-warning' : 'text-rv-border2 hover:text-rv-warning'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  {ratingMap[res.id] && <span className="ml-2 text-sm text-rv-muted">{ratingMap[res.id]}/5</span>}
+                </div>
+                <textarea
+                  rows={2}
+                  value={commentMap[res.id] ?? ''}
+                  onChange={(e) => setCommentMap((m) => ({ ...m, [res.id]: e.target.value }))}
+                  placeholder="Share your experience (optional)…"
+                  className="w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-olive-400/40 resize-none"
+                />
+                <button
+                  onClick={() => submitReview(res)}
+                  disabled={!ratingMap[res.id] || submittingReview === res.id}
+                  className="rounded-lg bg-rv-olive-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rv-olive-700 disabled:opacity-50"
+                >
+                  {submittingReview === res.id ? 'Submitting…' : 'Submit Review'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,37 +4,75 @@ const roleGuard = require('../middleware/roleGuard');
 const { getTenantClient } = require('../prisma/tenantClient');
 const { emit } = require('../socket');
 
-router.get('/', authMiddleware, async (req, res) => {
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+  try {
+    const jwt = require('jsonwebtoken');
+    req.user = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
+router.get('/', optionalAuth, async (req, res) => {
   const { checkIn, checkOut } = req.query;
   const db = getTenantClient(req.tenant.id);
 
   try {
     let excludedRoomIds = [];
     if (checkIn && checkOut) {
-      const overlapping = await db.reservation.findMany({
-        where: {
-          status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
-          checkIn: { lt: new Date(checkOut) },
-          checkOut: { gt: new Date(checkIn) },
-        },
-        select: { roomId: true },
-      });
-      excludedRoomIds = overlapping.map((r) => r.roomId);
+      const ciDate = new Date(checkIn);
+      const coDate = new Date(checkOut);
+
+      const [overlapping, blocked] = await Promise.all([
+        db.reservation.findMany({
+          where: {
+            status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+            checkIn: { lt: coDate },
+            checkOut: { gt: ciDate },
+          },
+          select: { roomId: true },
+        }),
+        db.roomBlock.findMany({
+          where: {
+            startDate: { lt: coDate },
+            endDate: { gt: ciDate },
+          },
+          select: { roomId: true },
+        }),
+      ]);
+
+      excludedRoomIds = [
+        ...overlapping.map((r) => r.roomId),
+        ...blocked.map((b) => b.roomId),
+      ];
     }
 
-    const rooms = await db.room.findMany({
-      where: excludedRoomIds.length ? { id: { notIn: excludedRoomIds } } : {},
-    });
+    const where = excludedRoomIds.length ? { id: { notIn: excludedRoomIds } } : {};
+
+    // Unauthenticated callers only see AVAILABLE rooms
+    if (!req.user) {
+      where.status = 'AVAILABLE';
+    }
+
+    const rooms = await db.room.findMany({ where });
     res.json(rooms);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/:id', authMiddleware, async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
-    const room = await db.room.findFirst({ where: { id: req.params.id } });
+    const where = { id: req.params.id };
+    if (!req.user) where.status = 'AVAILABLE';
+    const room = await db.room.findFirst({ where });
     if (!room) return res.status(404).json({ error: 'Room not found' });
     res.json(room);
   } catch (err) {

@@ -9,7 +9,7 @@
 
 :root {
   /* ── Warm backgrounds ────────────────────────────────────────────────── */
-  --rv-bg:            #F2E9DC;                        /* Sand */
+  --rv-bg:            #faf9f4;                        /* Cream */
   --rv-surface:       #FFFBF6;                        /* Warm white */
   --rv-surface2:      #EDE4D5;                        /* Deeper sand (hover) */
 
@@ -18,13 +18,13 @@
   --rv-border2:       rgba(168, 130, 95, 0.32);
 
   /* ── Semantic tints ──────────────────────────────────────────────────── */
-  --rv-accent-soft:   rgba(198, 93, 59, 0.09);        /* Terracotta tint */
+  --rv-accent-soft:   rgba(115, 138, 62, 0.09);        /* Olive tint */
   --rv-success-soft:  rgba(106, 123, 79, 0.10);       /* Olive tint */
   --rv-warning-soft:  rgba(184, 134, 11, 0.09);       /* Amber tint */
   --rv-danger-soft:   rgba(185, 28, 28, 0.07);        /* Red tint */
 
   /* ── RGB channel tokens (Tailwind /opacity modifier) ─────────────────── */
-  --rv-accent:        198 93 59;      /* Terracotta — primary actions */
+  --rv-accent:        115 138 62;     /* Olive — primary actions */
   --rv-sea:           58 111 115;     /* Sea Blue — informational */
   --rv-olive:         106 123 79;     /* Olive — success/ready */
   --rv-text:          30 30 30;       /* Near-black */
@@ -37,17 +37,17 @@
 
 /* ── Mediterranean Night Mode ─────────────────────────────────────────────── */
 .dark {
-  --rv-bg:            #1C1714;
+  --rv-bg:            #111810;
   --rv-surface:       #261E19;
   --rv-surface2:      #2F2520;
   --rv-border:        rgba(242, 233, 220, 0.09);
   --rv-border2:       rgba(242, 233, 220, 0.16);
-  --rv-accent-soft:   rgba(198, 93, 59, 0.15);
+  --rv-accent-soft:   rgba(148, 168, 90, 0.15);
   --rv-success-soft:  rgba(106, 123, 79, 0.15);
   --rv-warning-soft:  rgba(251, 191, 36, 0.10);
   --rv-danger-soft:   rgba(248, 113, 113, 0.10);
 
-  --rv-accent:        210 107 75;     /* Softer terracotta in dark */
+  --rv-accent:        148 168 90;     /* Olive-400 in dark */
   --rv-sea:           80 140 145;     /* Brighter sea in dark */
   --rv-olive:         130 150 100;    /* Brighter olive in dark */
   --rv-text:          235 225 213;    /* Warm off-white */
@@ -101,10 +101,10 @@ h1.serif, h2.serif, h3.serif {
 }
 .room-tile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(198, 93, 59, 0.18);
+  box-shadow: 0 8px 28px rgba(115, 138, 62, 0.18);
 }
 .room-tile.is-selected {
-  box-shadow: 0 0 0 2px #C65D3B, 0 8px 28px rgba(198, 93, 59, 0.22);
+  box-shadow: 0 0 0 2px #738a3e, 0 8px 28px rgba(115, 138, 62, 0.22);
 }
 
 /* ─── Keycard panel ──────────────────────────────────────────────────────── */

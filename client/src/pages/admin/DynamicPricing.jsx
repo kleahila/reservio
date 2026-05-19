@@ -133,7 +133,7 @@ export default function DynamicPricing() {
     }`;
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Dynamic Pricing"
         subtitle="Automatically adjust room prices when occupancy hits your threshold."

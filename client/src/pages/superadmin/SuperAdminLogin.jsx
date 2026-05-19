@@ -1,22 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 const inputCls =
   "w-full rounded-lg border border-rv-border2 bg-rv-surface px-3 py-2.5 text-sm text-rv-text placeholder:text-rv-subtle outline-none focus:ring-2 focus:ring-rv-accent/40";
 
 export default function SuperAdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("superadmin@reservio.com");
-  const [password, setPassword] = useState("demo123");
+  const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError('');
     setLoading(true);
-    setTimeout(() => {
-      localStorage.setItem("rv-role", "superadmin");
-      navigate("/superadmin/tenants");
-    }, 600);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      localStorage.setItem('rv_token', data.token);
+      localStorage.setItem('rv_role', 'SUPER_ADMIN');
+      navigate('/superadmin/tenants');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -38,8 +54,13 @@ export default function SuperAdminLogin() {
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} />
             </div>
             <div className="rounded-lg border border-rv-border bg-rv-surface2 px-4 py-3 text-xs text-rv-muted">
-              <span className="font-semibold text-rv-text">Demo:</span> any credentials accepted
+              <span className="font-semibold text-rv-text">Demo:</span> superadmin@reservio.com / password123
             </div>
+            {error && (
+              <p className="rounded-lg border border-rv-danger/20 bg-rv-danger-soft px-3 py-2 text-sm text-rv-danger">
+                {error}
+              </p>
+            )}
             <button type="submit" disabled={loading}
               className="w-full rounded-lg bg-rv-accent py-2.5 text-sm font-semibold text-white hover:bg-rv-accent/90 disabled:opacity-50">
               {loading ? "Signing in…" : "Sign in"}

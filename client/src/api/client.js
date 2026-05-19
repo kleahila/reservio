@@ -1,9 +1,17 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
+function getTenant() {
+  return (
+    localStorage.getItem('rv_tenant') ||
+    import.meta.env.VITE_TENANT_SUBDOMAIN ||
+    'grandtirana'
+  );
+}
+
 export async function apiCall(method, path, body, requiresAuth = false) {
   const headers = {
     'Content-Type': 'application/json',
-    'X-Tenant-Subdomain': 'grandtirana',
+    'X-Tenant-Subdomain': getTenant(),
   };
 
   if (requiresAuth) {

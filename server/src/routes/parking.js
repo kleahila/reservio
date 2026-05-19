@@ -4,7 +4,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 const roleGuard = require('../middleware/roleGuard');
 const { getTenantClient, prisma } = require('../prisma/tenantClient');
 
-router.get('/', authMiddleware, async (req, res) => {
+// GET — no auth required, tenant header only
+router.get('/', async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     res.json(await db.parkingSpot.findMany());
@@ -18,7 +19,8 @@ router.post('/', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res) => {
   if (!label || pricePerNight == null) return res.status(400).json({ error: 'label and pricePerNight required' });
   const db = getTenantClient(req.tenant.id);
   try {
-    res.status(201).json(await db.parkingSpot.create({ data: { label, pricePerNight } }));
+    const newSpot = await db.parkingSpot.create({ data: { label, pricePerNight } });
+    res.status(201).json(newSpot);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -40,6 +42,18 @@ router.put('/:id/price', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, r
   const db = getTenantClient(req.tenant.id);
   try {
     res.json(await db.parkingSpot.update({ where: { id: req.params.id }, data: { pricePerNight } }));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:id/price', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res) => {
+  const { pricePerNight, price } = req.body;
+  const p = pricePerNight ?? price;
+  if (p == null) return res.status(400).json({ error: 'pricePerNight required' });
+  const db = getTenantClient(req.tenant.id);
+  try {
+    res.json(await db.parkingSpot.update({ where: { id: req.params.id }, data: { pricePerNight: Number(p) } }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

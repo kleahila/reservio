@@ -2,6 +2,7 @@ const router = require('express').Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const roleGuard = require('../middleware/roleGuard');
 const { prisma } = require('../prisma/tenantClient');
+const { logActivity } = require('../services/activityLog');
 
 const guard = [authMiddleware, roleGuard('SUPER_ADMIN')];
 
@@ -9,7 +10,7 @@ router.get('/tenants', ...guard, async (req, res) => {
   try {
     const tenants = await prisma.tenant.findMany({
       include: {
-        _count: { select: { users: true, reservations: true } },
+        _count: { select: { users: true, reservations: true, rooms: true } },
       },
     });
     res.json(tenants);
@@ -65,6 +66,7 @@ router.put('/tenants/:id/plan', ...guard, async (req, res) => {
   }
   try {
     const tenant = await prisma.tenant.update({ where: { id: req.params.id }, data: { plan } });
+    await logActivity(null, req.user.userId, 'PLAN_CHANGED', 'Tenant', req.params.id, { plan });
     res.json(tenant);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -84,6 +86,54 @@ router.get('/analytics', ...guard, async (req, res) => {
       totalReservations,
       planBreakdown: planBreakdown.map((p) => ({ plan: p.plan, count: p._count._all })),
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/status', ...guard, async (req, res) => {
+  try {
+    const [activeTenants, totalUsers, tenants] = await Promise.all([
+      prisma.tenant.count({ where: { active: true } }),
+      prisma.user.count(),
+      prisma.tenant.findMany({
+        include: { _count: { select: { reservations: true, rooms: true } } },
+      }),
+    ]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const totalReservationsToday = await prisma.reservation.count({
+      where: { checkIn: { gte: today, lt: tomorrow } },
+    });
+
+    res.json({
+      activeTenants,
+      totalReservationsToday,
+      totalUsers,
+      tenants: tenants.map((t) => ({
+        name: t.name,
+        plan: t.plan,
+        active: t.active,
+        roomCount: t._count.rooms,
+        reservationCount: t._count.reservations,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/activity', ...guard, async (req, res) => {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -16,7 +16,10 @@ enum Plan {
 enum UserRole {
   GUEST
   STAFF
+  RECEPTIONIST
   HOUSEKEEPER
+  TECHNICIAN
+  MANAGER
   HOTEL_ADMIN
   SUPER_ADMIN
 }
@@ -58,6 +61,19 @@ enum TaskStatus {
   DONE
 }
 
+enum MaintenanceCategory {
+  LIGHTS
+  PLUMBING
+  CLEANING
+  OTHER
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
 model Tenant {
   id           String   @id @default(cuid())
   name         String
@@ -66,16 +82,21 @@ model Tenant {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  users            User[]
-  rooms            Room[]
-  reservations     Reservation[]
-  parkingSpots     ParkingSpot[]
-  sunbeds          Sunbed[]
+  users              User[]
+  rooms              Room[]
+  reservations       Reservation[]
+  parkingSpots       ParkingSpot[]
+  sunbeds            Sunbed[]
   sunbedReservations SunbedReservation[]
-  housekeepingTasks HousekeepingTask[]
-  services         Service[]
-  orders           Order[]
-  pricingRules     PricingRule[]
+  housekeepingTasks  HousekeepingTask[]
+  services           Service[]
+  orders             Order[]
+  pricingRules       PricingRule[]
+  staffShifts        StaffShift[]
+  roomReviews        RoomReview[]
+  maintenanceRequests MaintenanceRequest[]
+  roomBlocks         RoomBlock[]
+  guestBlacklists    GuestBlacklist[]
 }
 
 model User {
@@ -83,46 +104,60 @@ model User {
   tenantId     String?
   fullName     String
   email        String
+  username     String?
   passwordHash String
   role         UserRole @default(GUEST)
   active       Boolean  @default(true)
+  blacklisted  Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   reservations Reservation[]
   sunbedReservations SunbedReservation[]
   orders       Order[]
+  staffShifts  StaffShift[]
+  roomReviews  RoomReview[]
+  reportedMaintenance MaintenanceRequest[] @relation("ReportedBy")
+  assignedMaintenance MaintenanceRequest[] @relation("AssignedTo")
+  guestBlacklists GuestBlacklist[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
 }
 
 model Room {
-  id           String     @id @default(cuid())
-  tenantId     String
-  type         String
-  description  String?
-  pricePerNight Float
-  status       RoomStatus @default(AVAILABLE)
-  photos       String[]
-  createdAt    DateTime   @default(now())
+  id             String     @id @default(cuid())
+  tenantId       String
+  type           String
+  description    String?
+  pricePerNight  Float
+  status         RoomStatus @default(AVAILABLE)
+  photos         String[]
+  averageRating  Float?
+  createdAt      DateTime   @default(now())
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  reservations     Reservation[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reservations      Reservation[]
   housekeepingTasks HousekeepingTask[]
+  roomReviews       RoomReview[]
+  maintenanceRequests MaintenanceRequest[]
+  roomBlocks        RoomBlock[]
 
   @@index([tenantId])
 }
 
 model Reservation {
-  id        String            @id @default(cuid())
-  tenantId  String
-  userId    String
-  roomId    String
-  checkIn   DateTime
-  checkOut  DateTime
-  status    ReservationStatus @default(PENDING)
-  createdAt DateTime          @default(now())
+  id                String            @id @default(cuid())
+  tenantId          String
+  userId            String
+  roomId            String
+  checkIn           DateTime
+  checkOut          DateTime
+  status            ReservationStatus @default(PENDING)
+  groupId           String?
+  breakfastIncluded Boolean           @default(false)
+  breakfastPrice    Float?
+  createdAt         DateTime          @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id])
@@ -230,6 +265,103 @@ model PricingRule {
   enabled             Boolean @default(true)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model StaffShift {
+  id          String    @id @default(cuid())
+  tenantId    String
+  userId      String
+  clockIn     DateTime
+  clockOut    DateTime?
+  hoursWorked Float?
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model RoomReview {
+  id        String   @id @default(cuid())
+  tenantId  String
+  roomId    String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room   Room   @relation(fields: [roomId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, roomId])
+}
+
+model MaintenanceRequest {
+  id           String              @id @default(cuid())
+  tenantId     String
+  roomId       String
+  reportedById String
+  assignedToId String?
+  issue        String
+  category     MaintenanceCategory @default(OTHER)
+  status       MaintenanceStatus   @default(OPEN)
+  createdAt    DateTime            @default(now())
+  resolvedAt   DateTime?
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room       Room    @relation(fields: [roomId], references: [id])
+  reportedBy User    @relation("ReportedBy", fields: [reportedById], references: [id])
+  assignedTo User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([tenantId])
+}
+
+model RoomBlock {
+  id        String   @id @default(cuid())
+  tenantId  String
+  roomId    String
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, roomId])
+}
+
+model GuestBlacklist {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([tenantId])
 }

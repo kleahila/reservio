@@ -102,7 +102,7 @@ export default function ParkingManagement() {
     }`;
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Parking Management"
         subtitle="Manage parking spots, status, and pricing."

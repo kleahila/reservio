@@ -10,6 +10,7 @@ export default function HousekeeperLayout() {
       portalName="Housekeeping"
       links={LINKS}
       headerTitle="housekeeping.reservio.com"
+      showClockInOut
     />
   );
 }

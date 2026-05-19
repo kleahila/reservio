@@ -1,14 +1,73 @@
 import { useState, useEffect, useRef } from 'react';
 import StatusBadge from '../../components/StatusBadge';
 import { getParking, lockSpot, confirmSpot, releaseSpot } from '../../api/parking';
+import { getTenantConfig } from '../../config/tenants';
 
-const CARD_CLS = {
-  Available:   'border-rv-success/40 bg-rv-success-soft hover:border-rv-success/60 cursor-pointer',
-  Occupied:    'border-rv-accent/30 bg-rv-accent-soft cursor-not-allowed opacity-60',
-  Maintenance: 'border-rv-danger/30 bg-rv-danger-soft cursor-not-allowed opacity-60',
-  Reserved:    'border-rv-warning/30 bg-rv-warning-soft cursor-not-allowed opacity-60',
-  LOCKED:      'border-rv-warning/40 bg-rv-warning-soft cursor-not-allowed opacity-60',
-};
+function CarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 17H3v-5l2-5h14l2 5v5h-2" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+    </svg>
+  );
+}
+
+function SpotCard({ spot, selected, onSelect, disabled }) {
+  const statusColor =
+    spot.status === 'AVAILABLE' || spot.status === 'Available'
+      ? 'border-rv-olive-400/60 bg-rv-olive-50 dark:bg-rv-olive-900/20 cursor-pointer hover:border-rv-olive-500'
+      : spot.status === 'LOCKED' || spot.status === 'Reserved'
+      ? 'border-rv-warning/50 bg-rv-warning-soft cursor-not-allowed opacity-70'
+      : 'border-rv-danger/40 bg-rv-danger-soft cursor-not-allowed opacity-60';
+
+  const isAvail = spot.status === 'AVAILABLE' || spot.status === 'Available';
+
+  return (
+    <button
+      onClick={() => isAvail && !disabled && onSelect(spot)}
+      disabled={!isAvail || disabled}
+      className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 p-3 text-center transition ${statusColor} ${selected?.id === spot.id ? 'ring-2 ring-rv-olive-500 ring-offset-1' : ''}`}
+    >
+      <CarIcon />
+      <span className="text-sm font-bold text-rv-text">{spot.label}</span>
+      <span className="text-[10px] text-rv-muted">${spot.pricePerNight}/n</span>
+    </button>
+  );
+}
+
+function GridABLayout({ spots, selected, onSelect, loading }) {
+  const rowA = spots.filter((s) => s.label.startsWith('A'));
+  const rowB = spots.filter((s) => s.label.startsWith('B'));
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rv-muted">Row A</p>
+        <div className="flex flex-wrap gap-3">
+          {rowA.map((s) => <SpotCard key={s.id} spot={s} selected={selected} onSelect={onSelect} disabled={loading} />)}
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rv-muted">Row B</p>
+        <div className="flex flex-wrap gap-3">
+          {rowB.map((s) => <SpotCard key={s.id} spot={s} selected={selected} onSelect={onSelect} disabled={loading} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LShapeCLayout({ spots, selected, onSelect, loading }) {
+  const colC = spots.filter((s) => s.label.startsWith('C'));
+  return (
+    <div>
+      <p className="mb-2 text-xs font-bold uppercase tracking-widest text-rv-muted">Column C</p>
+      <div className="flex flex-col gap-3 w-fit">
+        {colC.map((s) => <SpotCard key={s.id} spot={s} selected={selected} onSelect={onSelect} disabled={loading} />)}
+      </div>
+    </div>
+  );
+}
 
 export default function ParkingMap() {
   const [spots, setSpots] = useState([]);
@@ -21,6 +80,8 @@ export default function ParkingMap() {
   const [lockedId, setLockedId] = useState(null);
   const timerRef = useRef(null);
 
+  const { parkingLayout } = getTenantConfig();
+
   useEffect(() => {
     let cancelled = false;
     getParking()
@@ -29,7 +90,6 @@ export default function ParkingMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // 5-minute countdown after locking a spot
   useEffect(() => {
     if (!lockedId) return;
     setCountdown(300);
@@ -39,7 +99,7 @@ export default function ParkingMap() {
           releaseSpot(lockedId).catch(() => {});
           setLockedId(null);
           setSelected(null);
-          setSpots((prev) => prev.map((s) => s.id === lockedId ? { ...s, status: 'Available' } : s));
+          setSpots((prev) => prev.map((s) => s.id === lockedId ? { ...s, status: 'AVAILABLE' } : s));
           return 300;
         }
         return c - 1;
@@ -48,26 +108,19 @@ export default function ParkingMap() {
     return () => clearInterval(timerRef.current);
   }, [lockedId]);
 
-  const stats = {
-    available:   spots.filter((s) => s.status === 'Available').length,
-    occupied:    spots.filter((s) => s.status === 'Occupied' || s.status === 'OCCUPIED').length,
-    reserved:    spots.filter((s) => s.status === 'Reserved' || s.status === 'RESERVED').length,
-    maintenance: spots.filter((s) => s.status === 'Maintenance' || s.status === 'MAINTENANCE').length,
-  };
+  const available = spots.filter((s) => s.status === 'AVAILABLE' || s.status === 'Available').length;
+  const taken     = spots.length - available;
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   async function handleSpotClick(spot) {
-    if (spot.status !== 'Available') return;
     setLocking(true);
     try {
       await lockSpot(spot.id);
       setSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, status: 'Reserved' } : s));
       setSelected(spot);
       setLockedId(spot.id);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLocking(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLocking(false); }
   }
 
   async function handleConfirm() {
@@ -78,82 +131,63 @@ export default function ParkingMap() {
       setLockedId(null);
       setConfirmed(selected);
       setSelected(null);
-      setSpots((prev) => prev.map((s) => s.id === selected.id ? { ...s, status: 'Occupied' } : s));
-    } catch (err) {
-      setError(err.message);
-    }
+      setSpots((prev) => prev.map((s) => s.id === selected.id ? { ...s, status: 'TAKEN' } : s));
+    } catch (err) { setError(err.message); }
   }
 
   async function handleCancel() {
     if (!selected) return;
-    try {
-      await releaseSpot(selected.id);
-    } catch { /* ignore */ }
+    try { await releaseSpot(selected.id); } catch { /* ignore */ }
     clearInterval(timerRef.current);
     setLockedId(null);
-    setSpots((prev) => prev.map((s) => s.id === selected.id ? { ...s, status: 'Available' } : s));
+    setSpots((prev) => prev.map((s) => s.id === selected.id ? { ...s, status: 'AVAILABLE' } : s));
     setSelected(null);
   }
-
-  const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-rv-text">Parking</h1>
-        <p className="mt-1 text-rv-muted">Tap an available spot to reserve it for your stay.</p>
+        <h1 className="font-serif text-3xl font-bold text-rv-text">Parking</h1>
+        <p className="mt-1 text-rv-muted">Tap an available spot to reserve it.</p>
       </div>
 
       {loading && <div className="py-8 text-center text-rv-muted">Loading parking spots…</div>}
-
       {error && (
-        <div className="rounded-xl border border-rv-danger/20 bg-rv-danger-soft px-5 py-4 text-sm text-rv-danger">
-          {error}
-        </div>
+        <div className="rounded-xl border border-rv-danger/20 bg-rv-danger-soft px-5 py-4 text-sm text-rv-danger">{error}</div>
       )}
 
       {!loading && !error && (
         <>
           <div className="flex flex-wrap gap-3">
-            {Object.entries(stats).map(([label, count]) => (
+            {[
+              { label: 'Available', count: available, cls: 'text-rv-olive' },
+              { label: 'Taken',     count: taken,     cls: 'text-rv-danger' },
+            ].map(({ label, count, cls }) => (
               <div key={label} className="rounded-lg border border-rv-border bg-rv-surface px-4 py-2 text-sm">
-                <span className="capitalize text-rv-muted">{label}</span>
-                <span className="ml-2 font-bold text-rv-text">{count}</span>
+                <span className="text-rv-muted">{label}</span>
+                <span className={`ml-2 font-bold ${cls}`}>{count}</span>
               </div>
             ))}
           </div>
 
           {confirmed && (
-            <div className="rounded-xl border border-rv-success/30 bg-rv-success-soft px-5 py-4">
-              <p className="font-semibold text-rv-success">
-                Spot <strong>{confirmed.label}</strong> reserved &mdash; ${confirmed.pricePerNight}/night.
+            <div className="rounded-xl border border-rv-olive-300/50 bg-rv-olive-50 px-5 py-4 dark:bg-rv-olive-900/20">
+              <p className="font-semibold text-rv-olive">
+                Spot <strong>{confirmed.label}</strong> reserved — ${confirmed.pricePerNight}/night.
               </p>
-              <button onClick={() => setConfirmed(null)} className="mt-1 text-xs text-rv-success/70 hover:text-rv-success">
-                Dismiss
-              </button>
+              <button onClick={() => setConfirmed(null)} className="mt-1 text-xs text-rv-muted hover:text-rv-text">Dismiss</button>
             </div>
           )}
 
-          <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
-            {spots.map((spot) => (
-              <button
-                key={spot.id}
-                onClick={() => handleSpotClick(spot)}
-                disabled={spot.status !== 'Available' || locking}
-                className={`flex flex-col items-center justify-center rounded-xl border-2 p-3 text-center transition ${
-                  CARD_CLS[spot.status] ?? ''
-                } ${selected?.id === spot.id ? 'ring-2 ring-rv-accent ring-offset-1' : ''}`}
-              >
-                <span className="text-sm font-bold text-rv-text">{spot.label}</span>
-                <span className="text-xs text-rv-muted">${spot.pricePerNight}</span>
-              </button>
-            ))}
-          </div>
+          {parkingLayout === 'grid-ab' ? (
+            <GridABLayout spots={spots} selected={selected} onSelect={handleSpotClick} loading={locking} />
+          ) : (
+            <LShapeCLayout spots={spots} selected={selected} onSelect={handleSpotClick} loading={locking} />
+          )}
 
           <div className="flex flex-wrap gap-3 text-xs">
-            {['Available', 'Occupied', 'Reserved', 'Maintenance'].map((s) => (
-              <StatusBadge key={s} status={s} />
-            ))}
+            <StatusBadge status="Available" />
+            <StatusBadge status="Occupied" />
           </div>
 
           {selected && (
@@ -163,12 +197,12 @@ export default function ParkingMap() {
                   <p className="font-semibold text-rv-text">Spot {selected.label}</p>
                   <p className="text-sm text-rv-muted">${selected.pricePerNight}/night</p>
                   {lockedId && (
-                    <p className="text-xs text-rv-warning">Reserved for {fmt(countdown)} — confirm or it will be released</p>
+                    <p className="text-xs text-rv-warning">Locked for {fmt(countdown)} — confirm or it will be released</p>
                   )}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleCancel} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
-                  <button onClick={handleConfirm} className="rounded-lg bg-rv-accent px-5 py-2 text-sm font-semibold text-white hover:bg-rv-accent/90">Confirm</button>
+                  <button onClick={handleConfirm} className="rounded-lg bg-rv-olive-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rv-olive-700">Confirm</button>
                 </div>
               </div>
             </div>

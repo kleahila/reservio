@@ -3,6 +3,7 @@ import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 import { getRooms, createRoom, updateRoom, deleteRoom } from '../../api/rooms';
+import { getRoomBlocks, createRoomBlock, deleteRoomBlock } from '../../api/roomBlocks';
 
 const STATUSES = ['Available', 'Occupied', 'Maintenance'];
 
@@ -20,16 +21,47 @@ export default function RoomManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [blocks, setBlocks] = useState([]);
+  const [blockTarget, setBlockTarget] = useState(null);
+  const [blockForm, setBlockForm] = useState({ startDate: '', endDate: '', reason: '' });
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
   useEffect(() => {
     let cancelled = false;
-    getRooms()
-      .then((data) => { if (!cancelled) { setRooms(data || []); setLoading(false); } })
+    Promise.all([getRooms(), getRoomBlocks()])
+      .then(([roomData, blockData]) => {
+        if (!cancelled) {
+          setRooms(roomData || []);
+          setBlocks(blockData || []);
+          setLoading(false);
+        }
+      })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false); } });
     return () => { cancelled = true; };
   }, []);
+
+  async function handleAddBlock(e) {
+    e.preventDefault();
+    if (!blockTarget || !blockForm.startDate || !blockForm.endDate) return;
+    setSaving(true);
+    try {
+      const newBlock = await createRoomBlock({ roomId: blockTarget.id, ...blockForm });
+      setBlocks((b) => [...b, newBlock]);
+      showToast('Room blocked.');
+      setBlockTarget(null);
+      setBlockForm({ startDate: '', endDate: '', reason: '' });
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleRemoveBlock(blockId) {
+    try {
+      await deleteRoomBlock(blockId);
+      setBlocks((b) => b.filter((x) => x.id !== blockId));
+      showToast('Block removed.');
+    } catch (err) { setError(err.message); }
+  }
 
   function openEdit(room) {
     setEditTarget(room);
@@ -90,7 +122,7 @@ export default function RoomManagement() {
   }
 
   return (
-    <div>
+    <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Room Inventory"
         subtitle="Manage room status and nightly pricing."
@@ -132,13 +164,35 @@ export default function RoomManagement() {
                   <td className="px-5 py-3 text-rv-muted">Floor {room.floor}</td>
                   <td className="px-5 py-3 text-rv-text">${room.pricePerNight}</td>
                   <td className="px-5 py-3"><StatusBadge status={room.status} /></td>
-                  <td className="px-5 py-3 flex gap-2">
-                    <button onClick={() => openEdit(room)} className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-rv-accent/90">
-                      Edit
-                    </button>
-                    <button onClick={() => setDeleteTarget(room)} className="rounded-lg bg-rv-danger-soft px-3 py-1.5 text-xs font-semibold text-rv-danger hover:bg-rv-danger/20">
-                      Delete
-                    </button>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => openEdit(room)} className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-rv-accent/90">
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => { setBlockTarget(room); setBlockForm({ startDate: '', endDate: '', reason: '' }); }}
+                        className="rounded-lg border border-rv-warning/40 bg-rv-warning-soft px-3 py-1.5 text-xs font-semibold text-rv-warning hover:bg-rv-warning/20"
+                      >
+                        Block
+                      </button>
+                      <button onClick={() => setDeleteTarget(room)} className="rounded-lg bg-rv-danger-soft px-3 py-1.5 text-xs font-semibold text-rv-danger hover:bg-rv-danger/20">
+                        Delete
+                      </button>
+                    </div>
+                    {blocks.filter((b) => b.roomId === room.id).map((b) => (
+                      <div key={b.id} className="mt-1 flex items-center gap-1">
+                        <span className="rounded-full bg-rv-danger-soft px-2 py-0.5 text-[10px] font-medium text-rv-danger">
+                          Blocked {b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}
+                          {b.reason ? ` · ${b.reason}` : ''}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveBlock(b.id)}
+                          className="text-[10px] text-rv-muted hover:text-rv-danger"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </td>
                 </tr>
               ))}
@@ -205,6 +259,32 @@ export default function RoomManagement() {
             <button type="button" onClick={() => setAddModal(false)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
             <button type="submit" disabled={saving} className="rounded-lg bg-rv-accent px-4 py-2 text-sm font-semibold text-white hover:bg-rv-accent/90 disabled:opacity-50">
               {saving ? 'Adding…' : 'Add room'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Block dates modal */}
+      <Modal isOpen={!!blockTarget} onClose={() => setBlockTarget(null)} title={`Block Dates — ${blockTarget?.type}`}>
+        <form onSubmit={handleAddBlock} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-rv-text">Start date</label>
+              <input type="date" value={blockForm.startDate} onChange={(e) => setBlockForm((f) => ({ ...f, startDate: e.target.value }))} className={inputCls} required />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-rv-text">End date</label>
+              <input type="date" value={blockForm.endDate} min={blockForm.startDate} onChange={(e) => setBlockForm((f) => ({ ...f, endDate: e.target.value }))} className={inputCls} required />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-rv-text">Reason (optional)</label>
+            <input value={blockForm.reason} onChange={(e) => setBlockForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Renovation" className={inputCls} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setBlockTarget(null)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
+            <button type="submit" disabled={saving} className="rounded-lg bg-rv-warning px-4 py-2 text-sm font-semibold text-white hover:bg-rv-warning/90 disabled:opacity-50">
+              {saving ? 'Blocking…' : 'Block Dates'}
             </button>
           </div>
         </form>

@@ -15,3 +15,7 @@ export function updateStaff(id, data) {
 export function deactivateStaff(id) {
   return apiCall('PATCH', `/api/staff/${id}/deactivate`, undefined, true);
 }
+
+export function deleteStaff(id) {
+  return apiCall('DELETE', `/api/staff/${id}`, undefined, true);
+}

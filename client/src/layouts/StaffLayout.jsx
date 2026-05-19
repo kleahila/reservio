@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import CommandBar from "../components/CommandBar";
 import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
+import NotificationBell from "../components/NotificationBell";
+import { useAuth } from "../hooks/useAuth";
+import { clockIn, clockOut, getMyShifts } from "../api/shifts";
 
-// ── Ambient clock shown in the top bar ────────────────────────────────────────
 function AmbientClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -17,16 +20,15 @@ function AmbientClock() {
   );
 }
 
-// ── Apply subtle time-of-day tint to the ambient overlay ──────────────────────
 function useAmbientMode() {
   useEffect(() => {
     function apply() {
       const h = new Date().getHours();
       let color   = "transparent";
       let opacity = "0";
-      if (h >= 6  && h < 12) { color = "rgba(255, 210, 120, 1)"; opacity = "0.025"; } // morning warm
-      if (h >= 18 && h < 21) { color = "rgba(198,  93,  59, 1)"; opacity = "0.030"; } // evening terracotta
-      if (h >= 21 || h < 6)  { color = "rgba( 30,  50,  90, 1)"; opacity = "0.045"; } // night blue
+      if (h >= 6  && h < 12) { color = "rgba(255, 210, 120, 1)"; opacity = "0.025"; }
+      if (h >= 18 && h < 21) { color = "rgba(198,  93,  59, 1)"; opacity = "0.030"; }
+      if (h >= 21 || h < 6)  { color = "rgba( 30,  50,  90, 1)"; opacity = "0.045"; }
       const el = document.getElementById("rv-ambient");
       if (el) {
         el.style.backgroundColor = color;
@@ -42,65 +44,105 @@ function useAmbientMode() {
 const NAV_LINKS = [
   { to: "/staff/dashboard",    label: "Command Center" },
   { to: "/staff/reservations", label: "Reservations"   },
-  { to: "/staff/rooms",        label: "Room Status"    },
+  { to: "/staff/checkin",      label: "Check-In"       },
+  { to: "/staff/checkout",     label: "Check-Out"      },
+  { to: "/staff/room-status",  label: "Room Status"    },
   { to: "/staff/housekeeping", label: "Housekeeping"   },
 ];
 
 export default function StaffLayout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [openShift, setOpenShift] = useState(null);
+  const [clockLoading, setClockLoading] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [note, setNote] = useState('');
   useAmbientMode();
 
-  // Global keyboard shortcut for command bar
+  useEffect(() => {
+    getMyShifts()
+      .then((shifts) => {
+        const open = (shifts || []).find((s) => !s.clockOut);
+        setOpenShift(open ?? null);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCmdOpen(true);
-      }
-      if (e.key === "/" && e.target === document.body) {
-        e.preventDefault();
-        setCmdOpen(true);
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setCmdOpen(true); }
+      if (e.key === "/" && e.target === document.body) { e.preventDefault(); setCmdOpen(true); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  function handleLogout() { logout(); navigate("/login"); }
+
+  function handleClockClick() {
+    if (openShift) { setNote(''); setShowNoteModal(true); }
+    else doClockIn();
+  }
+
+  async function doClockIn() {
+    setClockLoading(true);
+    try { const s = await clockIn(); setOpenShift(s); }
+    catch { /* ignore */ }
+    finally { setClockLoading(false); }
+  }
+
+  async function doClockOut() {
+    setClockLoading(true);
+    setShowNoteModal(false);
+    try { await clockOut(note); setOpenShift(null); setNote(''); }
+    catch { /* ignore */ }
+    finally { setClockLoading(false); }
+  }
+
   const linkClass = ({ isActive }) =>
     [
       "text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all duration-150",
       isActive
-        ? "text-rv-accent bg-rv-accent/10 font-semibold"
+        ? "text-rv-olive bg-rv-olive/10 font-semibold"
         : "text-rv-muted hover:text-rv-text hover:bg-rv-surface2",
     ].join(" ");
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-rv-bg">
-
-      {/* ── Mediterranean top navigation ─────────────────────────────────── */}
+    <div className="flex min-h-screen flex-col bg-rv-bg">
       <header className="flex h-12 shrink-0 items-center gap-4 border-b border-rv-border bg-rv-surface/80 backdrop-blur-sm px-5 z-30">
-
-        {/* Hotel brand mark */}
         <div className="flex items-center gap-2 shrink-0 mr-2">
           <div className="w-6 h-6 rounded-md flex items-center justify-center"
-               style={{ background: "rgba(198,93,59,0.15)" }}>
-            <span className="text-[10px] font-bold" style={{ color: "rgb(var(--rv-accent))" }}>H</span>
+               style={{ background: "rgba(115, 138, 62, 0.15)" }}>
+            <span className="text-[10px] font-bold text-rv-olive">H</span>
           </div>
           <span className="font-serif text-[13px] font-semibold text-rv-text tracking-wide whitespace-nowrap">
             Grand Hotel
           </span>
         </div>
 
-        {/* Nav links */}
         <nav className="flex items-center gap-0.5">
           {NAV_LINKS.map(({ to, label }) => (
             <NavLink key={to} to={to} className={linkClass}>{label}</NavLink>
           ))}
         </nav>
 
-        {/* Right cluster: clock + shortcut hint + theme */}
         <div className="ml-auto flex items-center gap-3">
           <AmbientClock />
+
+          <button
+            onClick={handleClockClick}
+            disabled={clockLoading}
+            className={`rounded-lg border px-3 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
+              openShift
+                ? "border-rv-danger/40 bg-rv-danger-soft text-rv-danger hover:bg-rv-danger/10"
+                : "border-rv-olive-400/40 bg-rv-olive-50 text-rv-olive-700 hover:bg-rv-olive-100 dark:bg-rv-olive-900/30 dark:text-rv-olive-300"
+            }`}
+          >
+            {openShift ? "Clock Out" : "Clock In"}
+          </button>
+
+          <NotificationBell />
 
           <button
             onClick={() => setCmdOpen(true)}
@@ -113,19 +155,45 @@ export default function StaffLayout() {
           </button>
 
           <ThemeToggle compact />
+
+          <button
+            onClick={handleLogout}
+            className="rounded-lg border border-rv-border2 px-2.5 py-1 text-[11px] font-medium text-rv-muted transition hover:border-rv-danger/40 hover:text-rv-danger"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
-      {/* ── Page content ─────────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
 
-      {/* ── Ambient overlay (barely noticeable time-of-day tint) ─────────── */}
       <div id="rv-ambient" className="rv-ambient" />
-
-      {/* ── Command Bar ──────────────────────────────────────────────────── */}
       {cmdOpen && <CommandBar onClose={() => setCmdOpen(false)} />}
+
+      {showNoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-rv-border bg-rv-surface p-6 shadow-xl">
+            <h3 className="mb-4 font-semibold text-rv-text">Clock Out — Handover Note</h3>
+            <textarea
+              rows={4}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Optional handover note for the next shift…"
+              className="w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2.5 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-olive-400/40 resize-none"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowNoteModal(false)} className="rounded-lg border border-rv-border2 px-4 py-2 text-sm font-medium text-rv-muted">Cancel</button>
+              <button onClick={doClockOut} disabled={clockLoading} className="rounded-lg bg-rv-danger px-4 py-2 text-sm font-semibold text-white hover:bg-rv-danger/90 disabled:opacity-50">
+                {clockLoading ? 'Clocking out…' : 'Clock Out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
     </div>
   );
 }
