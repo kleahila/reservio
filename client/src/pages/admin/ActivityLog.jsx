@@ -6,6 +6,27 @@ function formatDate(d) {
   return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function MetadataCell({ metadata }) {
+  if (!metadata || metadata === '{}') return '—';
+  try {
+    const parsed = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+    const entries = Object.entries(parsed);
+    if (entries.length === 0) return '—';
+    return (
+      <div className="flex flex-wrap gap-1">
+        {entries.map(([k, v]) => (
+          <span key={k} className="inline-flex items-center gap-1 bg-rv-surface2 rounded px-1.5 py-0.5">
+            <span className="text-rv-muted">{k}:</span>
+            <span className="font-medium text-rv-text">{String(v)}</span>
+          </span>
+        ))}
+      </div>
+    );
+  } catch {
+    return <span className="truncate">{String(metadata)}</span>;
+  }
+}
+
 export default function ActivityLog() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +99,17 @@ export default function ActivityLog() {
                 <tr key={log.id} className="hover:bg-rv-surface2 transition">
                   <td className="px-5 py-3 text-rv-muted whitespace-nowrap">{formatDate(log.createdAt)}</td>
                   <td className="px-5 py-3 font-mono text-xs text-rv-text">{log.action}</td>
-                  <td className="px-5 py-3 text-rv-muted">{log.entity ?? '—'} {log.entityId ? <span className="font-mono text-[10px]">…{log.entityId.slice(-6)}</span> : ''}</td>
-                  <td className="px-5 py-3 text-rv-muted text-xs max-w-[300px] truncate">{log.metadata ?? '—'}</td>
+                  <td className="px-5 py-3">
+                    <span className="font-medium text-rv-text">{log.entity ?? '—'}</span>
+                    {log.entityId ? (
+                      <span className="ml-1 font-mono text-[10px] text-rv-muted bg-rv-surface2 px-1 py-0.5 rounded">
+                        #{log.entityId.slice(-6)}
+                      </span>
+                    ) : ''}
+                  </td>
+                  <td className="px-5 py-3 text-xs max-w-[300px]">
+                    <MetadataCell metadata={log.metadata} />
+                  </td>
                 </tr>
               ))}
             </tbody>
