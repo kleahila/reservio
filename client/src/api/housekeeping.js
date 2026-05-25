@@ -11,3 +11,7 @@ export function markUrgent(id) {
 export function completeTask(id) {
   return apiCall('PUT', `/api/tasks/${id}/complete`, undefined, true);
 }
+
+export function assignTask(id, staffId) {
+  return apiCall('PUT', `/api/tasks/${id}/assign`, { staffId: staffId ?? null }, true);
+}

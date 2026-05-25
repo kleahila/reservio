@@ -12,6 +12,10 @@ export function getMyShifts() {
   return apiCall('GET', '/api/shifts/my', undefined, true);
 }
 
+export function getLastHandover() {
+  return apiCall('GET', '/api/shifts/last-handover', undefined, true);
+}
+
 export function getAllShifts(params = {}) {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v); });

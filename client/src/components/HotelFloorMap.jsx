@@ -1,28 +1,22 @@
 import { useState, useMemo } from "react";
 
 // ── Status visual config ──────────────────────────────────────────────────────
-// All class strings are kept as literals so Tailwind can statically detect them.
+// Keys must match DB RoomStatus enum values exactly (uppercase).
 
 const STATUS = {
-  Available: {
+  AVAILABLE: {
     tile:    "bg-rv-olive/12 border-rv-olive/30 hover:border-rv-olive/55",
     dot:     "bg-rv-olive",
     tag:     "Ready Room",
     tagCls:  "text-rv-olive",
   },
-  Occupied: {
+  OCCUPIED: {
     tile:    "bg-rv-accent/10 border-rv-accent/30 hover:border-rv-accent/55",
     dot:     "bg-rv-accent",
     tag:     "Do Not Disturb",
     tagCls:  "text-rv-accent",
   },
-  Cleaning: {
-    tile:    "bg-rv-warning/10 border-rv-warning/30 hover:border-rv-warning/55",
-    dot:     "bg-rv-warning",
-    tag:     "Cleaning",
-    tagCls:  "text-rv-warning",
-  },
-  Maintenance: {
+  MAINTENANCE: {
     tile:    "bg-rv-muted/8 border-rv-border hover:border-rv-muted/40",
     dot:     "bg-rv-muted",
     tag:     "Maintenance",
@@ -32,8 +26,8 @@ const STATUS = {
 
 // ── AI hint logic (subtle system suggestions) ─────────────────────────────────
 function getAIHint(room, reservation) {
-  if (room.status === "Cleaning") return "Should be ready soon";
-  if (room.status === "Occupied" && reservation) {
+  if (room.status === "MAINTENANCE") return "Should be ready soon";
+  if (room.status === "OCCUPIED" && reservation) {
     const today = new Date();
     const out   = new Date(reservation.checkOut);
     const diff  = Math.round((out - today) / 86_400_000);
@@ -54,7 +48,7 @@ function nightsRemaining(reservation) {
 // ── Room Tile ─────────────────────────────────────────────────────────────────
 function RoomTile({ room, reservation, isSelected, onRoomClick }) {
   const [hovered, setHovered] = useState(false);
-  const cfg    = STATUS[room.status] ?? STATUS.Available;
+  const cfg    = STATUS[room.status] ?? STATUS.AVAILABLE;
   const hint   = getAIHint(room, reservation);
   const nights = nightsRemaining(reservation);
 
@@ -75,9 +69,9 @@ function RoomTile({ room, reservation, isSelected, onRoomClick }) {
         {/* Status dot */}
         <span className={`absolute top-2.5 right-2.5 w-2 h-2 rounded-full ${cfg.dot}`} />
 
-        {/* Room number – serif, prominent */}
-        <span className="font-mono text-[17px] font-bold leading-none text-rv-text">
-          {room.roomNumber}
+        {/* Room label – type abbreviation */}
+        <span className="font-mono text-[12px] font-bold leading-none text-rv-text truncate">
+          {room.roomNumber ?? room.type?.slice(0, 3).toUpperCase()}
         </span>
 
         {/* Room type – tiny, uppercase */}
@@ -104,7 +98,7 @@ function RoomTile({ room, reservation, isSelected, onRoomClick }) {
           {reservation ? (
             <>
               <p className="text-[12px] font-semibold text-rv-text leading-snug">
-                {reservation.guestName}
+                {reservation.guest?.fullName ?? reservation.guestName ?? "Guest"}
               </p>
               <p className="text-[11px] text-rv-muted mt-0.5 leading-snug">
                 {nights !== null && nights > 0
@@ -144,9 +138,11 @@ function FloorRow({ floor, rooms, selectedRoomId, onRoomClick, getReservation })
 
   return (
     <div className="flex items-center gap-4">
-      {/* Floor label */}
+      {/* Floor / type label */}
       <div className="w-14 shrink-0 text-right">
-        <span className="text-[10px] font-mono text-rv-subtle">F{floor}</span>
+        <span className="text-[10px] font-mono text-rv-subtle">
+          {typeof floor === "number" ? `F${floor}` : String(floor).slice(0, 5).toUpperCase()}
+        </span>
       </div>
 
       {/* Corridor guide line + tiles */}
@@ -171,32 +167,33 @@ function FloorRow({ floor, rooms, selectedRoomId, onRoomClick, getReservation })
 export default function HotelFloorMap({ rooms, reservations, selectedRoomId, onRoomClick }) {
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Group rooms by floor, top-floor first
+  // Group rooms by type since DB has no floor field
   const floors = useMemo(() => {
     const map = {};
     rooms.forEach((r) => {
-      if (!map[r.floor]) map[r.floor] = [];
-      map[r.floor].push(r);
+      const key = r.floor ?? r.type ?? "Room";
+      if (!map[key]) map[key] = [];
+      map[key].push(r);
     });
-    return Object.entries(map)
-      .map(([f, rs]) => ({ floor: +f, rooms: rs }))
-      .sort((a, b) => b.floor - a.floor);
+    return Object.entries(map).map(([f, rs]) => ({ floor: f, rooms: rs }));
   }, [rooms]);
 
   // Find the most relevant reservation for a room
   function getReservation(roomId) {
     return (
       reservations.find(
-        (r) => r.roomId === roomId && r.status !== "CheckedOut" && r.checkOut >= today,
+        (r) =>
+          r.roomId === roomId &&
+          r.status !== "CHECKED_OUT" &&
+          r.checkOut?.slice(0, 10) >= today,
       ) ?? null
     );
   }
 
   const counts = {
-    ready:   rooms.filter((r) => r.status === "Available").length,
-    occ:     rooms.filter((r) => r.status === "Occupied").length,
-    clean:   rooms.filter((r) => r.status === "Cleaning").length,
-    maint:   rooms.filter((r) => r.status === "Maintenance").length,
+    ready:   rooms.filter((r) => r.status === "AVAILABLE").length,
+    occ:     rooms.filter((r) => r.status === "OCCUPIED").length,
+    maint:   rooms.filter((r) => r.status === "MAINTENANCE").length,
   };
 
   return (
@@ -210,8 +207,6 @@ export default function HotelFloorMap({ rooms, reservations, selectedRoomId, onR
           <span className="text-rv-olive font-medium">{counts.ready} ready</span>
           {" · "}
           <span className="text-rv-accent font-medium">{counts.occ} occupied</span>
-          {" · "}
-          <span className="text-rv-warning font-medium">{counts.clean} cleaning</span>
           {counts.maint > 0 && (
             <><span> · </span><span className="text-rv-muted font-medium">{counts.maint} maintenance</span></>
           )}

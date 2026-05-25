@@ -20,7 +20,7 @@ export default function RoomStatusGrid() {
 
   useEffect(() => {
     let cancelled = false;
-    getRooms()
+    getRooms(undefined, undefined, true)
       .then((data) => { if (!cancelled) { setRooms(data || []); setLoading(false); } })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false); } });
     return () => { cancelled = true; };

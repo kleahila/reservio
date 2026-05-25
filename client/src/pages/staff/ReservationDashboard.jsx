@@ -1,11 +1,11 @@
 // Mediterranean Hotel Command Center — Staff Dashboard
 // Layout: Left panel | Floor map | Keycard panel (slide-in) / Bottom timeline
 
-import { useState, useMemo } from "react";
-import { mockRooms }        from "../../data/mockRooms";
-import { mockReservations } from "../../data/mockReservations";
-import { mockTasks }        from "../../data/mockTasks";
-import { mockStaff }        from "../../data/mockStaff";
+import { useState, useEffect, useMemo } from "react";
+import { getRooms, updateRoomStatus } from "../../api/rooms";
+import { getReservations, updateReservationStatus } from "../../api/reservations";
+import { getTasks } from "../../api/housekeeping";
+import { getStaff } from "../../api/staff";
 
 import LeftCommandPanel from "../../components/LeftCommandPanel";
 import HotelFloorMap    from "../../components/HotelFloorMap";
@@ -13,11 +13,37 @@ import KeycardPanel     from "../../components/KeycardPanel";
 import BookingTimeline  from "../../components/BookingTimeline";
 
 export default function CommandCenter() {
-  const [rooms,        setRooms]        = useState(mockRooms);
-  const [reservations, setReservations] = useState(mockReservations);
+  const [rooms,        setRooms]        = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [tasks,        setTasks]        = useState([]);
+  const [staff,        setStaff]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
   const [selectedId,   setSelectedId]   = useState(null);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getRooms(undefined, undefined, true),
+      getReservations(),
+      getTasks(),
+      getStaff(),
+    ])
+      .then(([roomsData, resData, tasksData, staffData]) => {
+        if (cancelled) return;
+        setRooms(roomsData || []);
+        setReservations(resData || []);
+        setTasks(tasksData || []);
+        setStaff(staffData || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!cancelled) { setError(err.message); setLoading(false); }
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Selected room / reservation ───────────────────────────────────────
   const selectedRoom = useMemo(
@@ -27,17 +53,16 @@ export default function CommandCenter() {
 
   const selectedReservation = useMemo(() => {
     if (!selectedId) return null;
-    // Prefer active (checked-in) or upcoming reservation for the room
     return (
       reservations.find(
         (r) =>
           r.roomId === selectedId &&
-          r.status !== "CheckedOut" &&
-          r.checkIn <= today &&
-          r.checkOut >= today,
+          r.status !== "CHECKED_OUT" &&
+          r.checkIn?.slice(0, 10) <= today &&
+          r.checkOut?.slice(0, 10) >= today,
       ) ??
       reservations.find(
-        (r) => r.roomId === selectedId && r.status !== "CheckedOut",
+        (r) => r.roomId === selectedId && r.status !== "CHECKED_OUT",
       ) ??
       null
     );
@@ -49,15 +74,17 @@ export default function CommandCenter() {
   }
 
   function handleRoomStatusChange(roomId, newStatus) {
+    updateRoomStatus(roomId, newStatus).catch(() => {});
     setRooms((rs) => rs.map((r) => (r.id === roomId ? { ...r, status: newStatus } : r)));
   }
 
   function handleReservationTransition(id, next) {
+    updateReservationStatus(id, next).catch(() => {});
     setReservations((rs) => rs.map((r) => (r.id === id ? { ...r, status: next } : r)));
     // If checking out, sync room to Cleaning
-    if (next === "CheckedOut") {
+    if (next === "CHECKED_OUT") {
       const res = reservations.find((r) => r.id === id);
-      if (res) handleRoomStatusChange(res.roomId, "Cleaning");
+      if (res) handleRoomStatusChange(res.roomId, "MAINTENANCE");
     }
   }
 
@@ -65,8 +92,24 @@ export default function CommandCenter() {
     setReservations((rs) => rs.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   }
 
-  const activeStaff = useMemo(() => mockStaff.filter((s) => s.status === "Active"), []);
-  const openTasks   = useMemo(() => mockTasks.filter((t) => t.status !== "Cleaned"), []);
+  const activeStaff = useMemo(() => staff.filter((s) => s.active === true), [staff]);
+  const openTasks   = useMemo(() => tasks.filter((t) => t.status === "PENDING"), [tasks]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full text-rv-muted text-[13px]">
+        Loading…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-rv-danger text-[13px]">
+        Failed to load: {error}
+      </div>
+    );
+  }
 
   return (
     // Fill the full height of the StaffLayout <main> (viewport - 48px nav)

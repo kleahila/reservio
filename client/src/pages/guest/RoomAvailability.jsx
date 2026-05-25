@@ -1,18 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import StatusBadge from "../../components/StatusBadge";
-import { mockRooms } from "../../data/mockRooms";
+import { getRooms } from "../../api/rooms";
 
 export default function RoomAvailability() {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [searched, setSearched] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const available = mockRooms.filter((r) => r.status === "Available");
-
-  function handleSearch(e) {
+  async function handleSearch(e) {
     e.preventDefault();
-    setSearched(true);
+    setLoading(true);
+    setError(null);
+    setSearched(false);
+    try {
+      const data = await getRooms(checkIn, checkOut);
+      setRooms(data || []);
+      setSearched(true);
+    } catch (err) {
+      setError(err.message || "Failed to load rooms.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputClass =
@@ -50,53 +62,70 @@ export default function RoomAvailability() {
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-rv-accent px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rv-accent/90"
+            disabled={loading}
+            className="rounded-lg bg-rv-accent px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rv-accent/90 disabled:opacity-50"
           >
-            Search
+            {loading ? "Searching…" : "Search"}
           </button>
         </form>
       </div>
 
+      {loading && <div className="py-8 text-center text-rv-muted">Checking availability…</div>}
+
+      {error && (
+        <div className="rounded-xl border border-rv-danger/20 bg-rv-danger-soft px-5 py-4 text-sm text-rv-danger">
+          {error}
+        </div>
+      )}
+
       {/* Results */}
-      {searched && (
+      {searched && !loading && !error && (
         <div>
           <h2 className="mb-4 text-lg font-semibold text-rv-text">
-            {available.length} rooms available
+            {rooms.length} rooms available
             {checkIn && checkOut && (
               <span className="ml-2 text-sm font-normal text-rv-muted">
                 &mdash; {checkIn} to {checkOut}
               </span>
             )}
           </h2>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {available.map((room) => (
-              <div
-                key={room.id}
-                className="flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm"
-              >
-                <img src={room.photos[0]} alt={room.type} className="h-40 w-full object-cover" />
-                <div className="flex flex-1 flex-col p-4">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-rv-text">{room.type}</h3>
-                    <StatusBadge status={room.status} />
-                  </div>
-                  <p className="mb-4 flex-1 text-sm text-rv-muted line-clamp-2">{room.description}</p>
-                  <div className="flex items-center justify-between border-t border-rv-border pt-3">
-                    <span className="text-sm font-bold text-rv-text">
-                      ${room.pricePerNight}
-                      <span className="text-xs font-normal text-rv-muted">/night</span>
-                    </span>
-                    <Link
-                      to={`/reservation/${room.id}`}
-                      className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rv-accent/90"
-                    >
-                      Reserve
-                    </Link>
+          {rooms.length === 0 ? (
+            <div className="rounded-xl border border-rv-border bg-rv-surface p-8 text-center text-rv-muted">
+              No rooms available for the selected dates.
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {rooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="flex flex-col overflow-hidden rounded-xl border border-rv-border bg-rv-surface shadow-sm"
+                >
+                  {room.photos?.[0] && (
+                    <img src={room.photos[0]} alt={room.type} className="h-40 w-full object-cover" />
+                  )}
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-rv-text">{room.type}</h3>
+                      <StatusBadge status={room.status} />
+                    </div>
+                    <p className="mb-4 flex-1 text-sm text-rv-muted line-clamp-2">{room.description}</p>
+                    <div className="flex items-center justify-between border-t border-rv-border pt-3">
+                      <span className="text-sm font-bold text-rv-text">
+                        ${room.pricePerNight}
+                        <span className="text-xs font-normal text-rv-muted">/night</span>
+                      </span>
+                      <Link
+                        to={`/rooms/${room.id}`}
+                        className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rv-accent/90"
+                      >
+                        Reserve
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
