@@ -19,6 +19,18 @@ export function updateReservationStatus(id, status) {
   return apiCall('PATCH', `/api/reservations/${id}/status`, { status }, true);
 }
 
+export function confirmReservation(id) {
+  return apiCall('PUT', `/api/reservations/${id}/confirm`, {}, true);
+}
+
+export function checkInReservation(id) {
+  return apiCall('PUT', `/api/reservations/${id}/checkin`, {}, true);
+}
+
+export function checkOutReservation(id) {
+  return apiCall('PUT', `/api/reservations/${id}/checkout`, {}, true);
+}
+
 export function cancelReservation(id) {
   return apiCall('DELETE', `/api/reservations/${id}`, undefined, true);
 }

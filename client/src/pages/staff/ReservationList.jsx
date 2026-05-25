@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
-import { getReservations, updateReservationStatus } from '../../api/reservations';
+import { getReservations, confirmReservation, checkInReservation, checkOutReservation } from '../../api/reservations';
 
 const FILTER_STATUSES = ['All', 'Pending', 'Confirmed', 'CheckedIn', 'CheckedOut'];
 
@@ -48,8 +48,8 @@ export default function ReservationList() {
   }
 
   function getRoomLabel(r) {
-    if (r.room?.type && r.room?.description) return `${r.room.type} — ${r.room.description}`;
-    if (r.roomType) return r.roomType;
+    if (r.room?.type && r.room?.number) return `${r.room.type} — Room ${r.room.number}`;
+    if (r.room?.type) return r.room.type;
     return `Room #${r.roomId ?? '?'}`;
   }
 
@@ -78,7 +78,9 @@ export default function ReservationList() {
   async function transition(id, next) {
     setTransitioning(id);
     try {
-      await updateReservationStatus(id, next);
+      if (next === 'CONFIRMED')   await confirmReservation(id);
+      else if (next === 'CHECKED_IN')  await checkInReservation(id);
+      else if (next === 'CHECKED_OUT') await checkOutReservation(id);
       setReservations((list) => list.map((x) => x.id === id ? { ...x, status: next } : x));
     } catch (err) {
       setError(err.message);

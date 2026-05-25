@@ -1,6 +1,10 @@
-import { useState } from 'react';
-import { getReservations, updateReservationStatus } from '../../api/reservations';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { getReservations, checkInReservation } from '../../api/reservations';
+
+function fmt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function CheckIn() {
   const [reservations, setReservations] = useState([]);
@@ -15,7 +19,7 @@ export default function CheckIn() {
 
   async function handleCheckIn(id) {
     try {
-      await updateReservationStatus(id, 'CHECKED_IN');
+      await checkInReservation(id);
       setReservations((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       alert(err.message);
@@ -50,9 +54,14 @@ export default function CheckIn() {
               key={r.id}
               className="flex items-center justify-between rounded-xl border border-rv-border bg-rv-surface p-4"
             >
-              <div>
+              <div className="space-y-0.5">
                 <p className="font-semibold text-rv-text">{r.guest?.fullName ?? 'Guest'}</p>
-                <p className="text-sm text-rv-muted">Room {r.room?.description} · {r.checkIn} → {r.checkOut}</p>
+                <p className="text-sm text-rv-muted">
+                  {r.room?.type} · Room {r.room?.number ?? '—'}
+                </p>
+                <p className="text-xs text-rv-muted">
+                  {fmt(r.checkIn)} → {fmt(r.checkOut)}
+                </p>
               </div>
               <button
                 onClick={() => handleCheckIn(r.id)}

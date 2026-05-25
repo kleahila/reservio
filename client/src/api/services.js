@@ -2,7 +2,7 @@ import { apiCall } from './client';
 
 export function getServices(category) {
   const query = category ? `?category=${encodeURIComponent(category)}` : '';
-  return apiCall('GET', `/api/services${query}`, undefined, false);
+  return apiCall('GET', `/api/services${query}`, undefined, true);
 }
 
 export function createOrder(serviceId, reservationId) {

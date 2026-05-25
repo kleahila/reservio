@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useMemo, useCallback } from 'react';
-import { login as apiLogin } from '../api/auth';
+import { login as apiLogin, adminLogin as apiAdminLogin } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -34,12 +34,21 @@ export function AuthProvider({ children }) {
     return decoded;
   }, []);
 
+  const loginAdmin = useCallback(async (email, password) => {
+    const data = await apiAdminLogin(email, password);
+    const token = data.token || data.accessToken;
+    localStorage.setItem('rv_token', token);
+    const decoded = decodeToken(token);
+    setUser(decoded);
+    return decoded;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('rv_token');
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  const value = useMemo(() => ({ user, login, loginAdmin, logout }), [user, login, loginAdmin, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

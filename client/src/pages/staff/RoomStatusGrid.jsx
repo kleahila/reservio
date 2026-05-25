@@ -3,7 +3,14 @@ import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import { getRooms, updateRoomStatus } from '../../api/rooms';
 
-const STATUSES = ['Available', 'Occupied', 'Maintenance'];
+const STATUSES = ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE'];
+const STATUS_LABEL = { AVAILABLE: 'Available', OCCUPIED: 'Occupied', MAINTENANCE: 'Maintenance' };
+
+function floorFromDesc(desc) {
+  const n = parseInt(desc, 10);
+  if (isNaN(n)) return '—';
+  return Math.floor(n / 100) || 1;
+}
 
 export default function RoomStatusGrid() {
   const [rooms, setRooms] = useState([]);
@@ -53,7 +60,7 @@ export default function RoomStatusGrid() {
           <div className="mb-6 flex flex-wrap gap-3">
             {STATUSES.map((s) => (
               <div key={s} className="rounded-lg border border-rv-border bg-rv-surface px-4 py-2 text-sm">
-                <span className="text-rv-muted">{s}</span>
+                <span className="text-rv-muted">{STATUS_LABEL[s]}</span>
                 <span className="ml-2 font-bold text-rv-text">{counts[s]}</span>
               </div>
             ))}
@@ -63,17 +70,19 @@ export default function RoomStatusGrid() {
             {rooms.map((room) => (
               <div key={room.id} className="rounded-xl border border-rv-border bg-rv-surface p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-semibold text-rv-text">{room.type}</h3>
+                  <div>
+                    <h3 className="font-semibold text-rv-text">{room.type} — Room {room.description}</h3>
+                    <p className="text-xs text-rv-muted">Floor {floorFromDesc(room.description)}</p>
+                  </div>
                   <StatusBadge status={room.status} />
                 </div>
-                <p className="mb-3 text-xs text-rv-muted">Floor {room.floor}</p>
                 <select
                   value={room.status}
                   onChange={(e) => handleStatusChange(room.id, e.target.value)}
                   disabled={updating === room.id}
                   className="w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-accent/40 disabled:opacity-50"
                 >
-                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
               </div>
             ))}

@@ -53,7 +53,6 @@ import MaintenanceBoard from './pages/admin/MaintenanceBoard';
 import GuestList from './pages/admin/GuestList';
 import OccupancyCalendar from './pages/admin/OccupancyCalendar';
 import CommandCenter from './pages/admin/CommandCenter';
-import AdminActivityLog from './pages/admin/ActivityLog';
 import SunbedsConfig from './pages/admin/SunbedsConfig';
 
 // ── TECHNICIAN PORTAL ─────────────────────────────────────────────────────────
@@ -121,7 +120,7 @@ export default function App() {
       </Route>
 
       {/* ── STAFF PORTAL ─────────────────────────────────────────────────── */}
-      <Route element={<ProtectedRoute allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['STAFF', 'RECEPTIONIST']} />}>
         <Route path="/staff" element={<StaffLayout />}>
           <Route path="dashboard"    element={<ReservationDashboard />} />
           <Route path="reservations" element={<ReservationList />} />
@@ -154,7 +153,6 @@ export default function App() {
           <Route path="maintenance"    element={<MaintenanceBoard />} />
           <Route path="guests"         element={<GuestList />} />
           <Route path="calendar"       element={<OccupancyCalendar />} />
-          <Route path="activity"       element={<AdminActivityLog />} />
           <Route path="sunbeds"        element={<SunbedsConfig />} />
         </Route>
       </Route>

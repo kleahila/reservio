@@ -21,10 +21,10 @@ export default function Marketplace() {
       .then(([svcData, resData]) => {
         if (cancelled) return;
         setServices(svcData || []);
-        const checkedIn = (resData || []).find(
-          (r) => r.status === 'CHECKED_IN' || r.status === 'CheckedIn',
+        const active = (resData || []).find(
+          (r) => r.status === 'CHECKED_IN' || r.status === 'CheckedIn' || r.status === 'CONFIRMED',
         );
-        setActiveReservationId(checkedIn?.id ?? null);
+        setActiveReservationId(active?.id ?? null);
         setLoading(false);
       })
       .catch((err) => {
@@ -108,15 +108,10 @@ export default function Marketplace() {
                 <div className="flex items-center justify-between border-t border-rv-border pt-3">
                   <span className="text-sm font-bold text-rv-text">${service.price}</span>
                   <button
-                    disabled={!service.available}
                     onClick={() => { setBooking(service); setOrderError(''); }}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      service.available
-                        ? 'bg-rv-accent text-white hover:bg-rv-accent/90'
-                        : 'cursor-not-allowed bg-rv-surface2 text-rv-muted'
-                    }`}
+                    className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rv-accent/90"
                   >
-                    {service.available ? 'Book' : 'Unavailable'}
+                    Book
                   </button>
                 </div>
               </div>
@@ -134,7 +129,7 @@ export default function Marketplace() {
               <span className="font-bold text-rv-text">${booking.price}</span>
             </div>
             {!activeReservationId && (
-              <p className="mb-3 text-xs text-rv-warning">No active check-in found. Charge will be recorded without a reservation reference.</p>
+              <p className="mb-3 text-xs text-rv-warning">No active or upcoming reservation found. Charge will be recorded without a reservation reference.</p>
             )}
             {orderError && (
               <p className="mb-3 rounded-lg border border-rv-danger/20 bg-rv-danger-soft px-3 py-2 text-sm text-rv-danger">

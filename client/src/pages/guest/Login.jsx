@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { apiCall } from '../../api/client';
 
 const input = (err) =>
   `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-surface text-rv-text placeholder:text-rv-subtle outline-none transition focus:ring-2 focus:ring-rv-olive-400/40 ${
@@ -11,7 +12,6 @@ const ROLE_REDIRECT = {
   GUEST:       '/guest/dashboard',
   STAFF:       '/staff/reservations',
   RECEPTIONIST: '/staff/reservations',
-  MANAGER:     '/staff/reservations',
   HOUSEKEEPER: '/housekeeper/tasks',
   TECHNICIAN:  '/technician/tasks',
   HOTEL_ADMIN: '/admin/command-center',
@@ -20,12 +20,27 @@ const ROLE_REDIRECT = {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginAdmin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hotels, setHotels] = useState([]);
+  const [tenant, setTenant] = useState(() => localStorage.getItem('rv_tenant') || 'grandtirana');
+  const isSuperAdmin = tenant === '__superadmin__';
+
+  useEffect(() => {
+    apiCall('GET', '/api/public/tenants', undefined, false)
+      .then((data) => setHotels(data || []))
+      .catch(() => {});
+  }, []);
+
+  function handleTenantChange(subdomain) {
+    setTenant(subdomain);
+    if (subdomain !== '__superadmin__') localStorage.setItem('rv_tenant', subdomain);
+    setApiError('');
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -38,6 +53,11 @@ export default function Login() {
     setLoading(true);
     setApiError('');
     try {
+      if (isSuperAdmin) {
+        await loginAdmin(email, password);
+        navigate('/superadmin/tenants', { replace: true });
+        return;
+      }
       const user = await login(email, password);
       const redirect = ROLE_REDIRECT[user?.role] || '/';
       navigate(redirect, { replace: true });
@@ -58,6 +78,38 @@ export default function Login() {
 
         <div className="rounded-2xl border border-rv-border bg-rv-surface p-8 shadow-sm">
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {hotels.length > 0 && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-rv-text">Sign in as</label>
+                <div className="flex flex-wrap gap-2">
+                  {hotels.map((h) => (
+                    <button
+                      key={h.subdomain}
+                      type="button"
+                      onClick={() => handleTenantChange(h.subdomain)}
+                      className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                        tenant === h.subdomain
+                          ? 'border-rv-accent bg-rv-accent/10 text-rv-accent'
+                          : 'border-rv-border2 bg-rv-surface text-rv-muted hover:border-rv-accent/50 hover:text-rv-text'
+                      }`}
+                    >
+                      {h.name}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleTenantChange('__superadmin__')}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      isSuperAdmin
+                        ? 'border-rv-warning bg-rv-warning-soft text-rv-warning'
+                        : 'border-rv-border2 bg-rv-surface text-rv-muted hover:border-rv-warning/50 hover:text-rv-text'
+                    }`}
+                  >
+                    Super Admin
+                  </button>
+                </div>
+              </div>
+            )}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-rv-text">Email</label>
               <input

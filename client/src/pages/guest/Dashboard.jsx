@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+
+function fmt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function roomLabel(res) {
+  if (res.room?.type && res.room?.description) return `${res.room.type} — Room ${res.room.description}`;
+  if (res.room?.type) return res.room.type;
+  return 'Room';
+}
 import StatusBadge from '../../components/StatusBadge';
 import { useAuth } from '../../hooks/useAuth';
 import { getMyReservations } from '../../api/reservations';
@@ -102,10 +113,9 @@ export default function Dashboard() {
                 key={res.id}
                 className="flex items-center justify-between rounded-xl border border-rv-border bg-rv-surface p-4"
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-rv-subtle">RES-{res.id?.slice(0, 8).toUpperCase()}</span>
-                    <span className="font-semibold text-rv-text">{res.roomType || `Room #${res.roomId}`}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-rv-text">{roomLabel(res)}</span>
                     <StatusBadge status={res.status} />
                     {res.breakfastIncluded && (
                       <span className="rounded-full bg-rv-olive-100 px-2 py-0.5 text-xs font-medium text-rv-olive-700 dark:bg-rv-olive-900/30 dark:text-rv-olive-300">
@@ -113,16 +123,17 @@ export default function Dashboard() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-rv-muted">
-                    {res.checkIn} &rarr; {res.checkOut}
-                  </p>
+                  <p className="mt-0.5 text-sm text-rv-muted">{fmt(res.checkIn)} → {fmt(res.checkOut)}</p>
+                  {res.orders && res.orders.length > 0 && (
+                    <div className="mt-2 space-y-0.5">
+                      {res.orders.map((o) => (
+                        <p key={o.id} className="text-xs text-rv-muted">
+                          · {o.service?.name} <span className="text-rv-subtle">${o.service?.price}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <Link
-                  to={`/reservation/${res.roomId}`}
-                  className="text-xs font-medium text-rv-accent hover:underline"
-                >
-                  View
-                </Link>
               </div>
             ))}
           </div>
@@ -136,8 +147,8 @@ export default function Dashboard() {
             {checkedOut.map((res) => (
               <div key={res.id} className="rounded-xl border border-rv-border bg-rv-surface p-5 space-y-3">
                 <div>
-                  <p className="font-semibold text-rv-text">{res.roomType || `Room #${res.roomId}`}</p>
-                  <p className="text-xs text-rv-muted">{res.checkIn} → {res.checkOut}</p>
+                  <p className="font-semibold text-rv-text">{roomLabel(res)}</p>
+                  <p className="text-xs text-rv-muted">{fmt(res.checkIn)} → {fmt(res.checkOut)}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (

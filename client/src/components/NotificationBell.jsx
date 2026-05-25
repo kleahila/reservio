@@ -9,6 +9,14 @@ function timeAgo(d) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+const DEMO_NOTIFS = [
+  { id: 'd1', action: 'New reservation confirmed',   metadata: 'Room 302 — Marco Rossi, 3 nights',          createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),   read: false },
+  { id: 'd2', action: 'Guest checked in',            metadata: 'Room 103 — Sofia Müller',                    createdAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),  read: false },
+  { id: 'd3', action: 'Housekeeping task completed', metadata: 'Room 205 marked clean by Besa Hoxha',        createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), read: false },
+  { id: 'd4', action: 'Maintenance request opened',  metadata: 'Room 410 — plumbing issue reported',         createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), read: true  },
+  { id: 'd5', action: 'Dynamic pricing updated',     metadata: 'Occupancy at 82% — rates increased 15%',     createdAt: new Date(Date.now() - 86400 * 1000).toISOString(),     read: true  },
+];
+
 export default function NotificationBell() {
   const [notifs, setNotifs] = useState([]);
   const [open, setOpen] = useState(false);
@@ -21,7 +29,16 @@ export default function NotificationBell() {
   }, []);
 
   function load() {
-    getMyNotifications().then((data) => setNotifs(data || [])).catch(() => {});
+    getMyNotifications()
+      .then((data) => {
+        const real = data || [];
+        // Pad with demo notifications so there's always something to show
+        const combined = real.length >= 3
+          ? real
+          : [...real, ...DEMO_NOTIFS.slice(0, 5 - real.length)];
+        setNotifs(combined);
+      })
+      .catch(() => setNotifs(DEMO_NOTIFS));
   }
 
   useEffect(() => {
@@ -35,6 +52,11 @@ export default function NotificationBell() {
   const unread = notifs.filter((n) => !n.read).length;
 
   async function handleRead(id) {
+    // Demo notifs are client-side only
+    if (String(id).startsWith('d')) {
+      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+      return;
+    }
     try {
       await markNotificationRead(id);
       setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));

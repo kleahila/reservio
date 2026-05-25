@@ -3,7 +3,11 @@ import StatusBadge from '../../components/StatusBadge';
 import { getSunbeds, lockSunbed, confirmSunbed, releaseSunbed } from '../../api/sunbeds';
 import { getTenantConfig } from '../../config/tenants';
 
-const SLOTS = ['Morning', 'Afternoon', 'Full Day'];
+const SLOTS = [
+  { value: 'MORNING',   label: 'Morning'   },
+  { value: 'AFTERNOON', label: 'Afternoon' },
+  { value: 'FULL_DAY',  label: 'Full Day'  },
+];
 
 function SunbedButton({ bed, selected, onSelect, disabled }) {
   const isAvail = bed.status === 'AVAILABLE' || bed.status === 'Available';
@@ -79,7 +83,7 @@ export default function SunbedMap() {
   const [selected, setSelected] = useState(null);
   const [confirmed, setConfirmed] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [selectedSlot, setSelectedSlot] = useState('Full Day');
+  const [selectedSlot, setSelectedSlot] = useState('FULL_DAY');
   const [locking, setLocking] = useState(false);
   const [lockedId, setLockedId] = useState(null);
   const [countdown, setCountdown] = useState(300);
@@ -161,7 +165,7 @@ export default function SunbedMap() {
       {confirmed && (
         <div className="rounded-xl border border-rv-sea-300/50 bg-rv-sea-50 px-5 py-4 dark:bg-rv-sea-900/20">
           <p className="font-semibold text-rv-sea">
-            Sunbed <strong>{confirmed.label}</strong> — {confirmed.slot} on {confirmed.date}.
+            Sunbed <strong>{confirmed.label}</strong> — {SLOTS.find(s => s.value === confirmed.slot)?.label ?? confirmed.slot} on {confirmed.date}.
           </p>
           <button onClick={() => setConfirmed(null)} className="mt-1 text-xs text-rv-muted hover:text-rv-text">Dismiss</button>
         </div>
@@ -211,7 +215,7 @@ export default function SunbedMap() {
                   onChange={(e) => setSelectedSlot(e.target.value)}
                   className="w-full rounded-lg border border-rv-border2 bg-rv-surface px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-sea/40"
                 >
-                  {SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
             </div>

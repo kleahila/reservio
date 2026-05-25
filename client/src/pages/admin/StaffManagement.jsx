@@ -4,7 +4,7 @@ import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 import { getStaff, createStaff, updateStaff, deactivateStaff, deleteStaff } from '../../api/staff';
 
-const ROLES = ['RECEPTIONIST', 'HOUSEKEEPER', 'TECHNICIAN', 'MANAGER'];
+const ROLES = ['RECEPTIONIST', 'HOUSEKEEPER', 'TECHNICIAN'];
 
 const inputCls =
   'w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2.5 text-sm text-rv-text placeholder:text-rv-subtle outline-none focus:ring-2 focus:ring-rv-accent/40';

@@ -4,6 +4,10 @@ export function login(email, password) {
   return apiCall('POST', '/api/auth/login', { email, password }, false);
 }
 
+export function adminLogin(email, password) {
+  return apiCall('POST', '/api/admin/login', { email, password }, false);
+}
+
 export function register(fullName, email, password) {
   return apiCall('POST', '/api/auth/register', { fullName, email, password }, false);
 }

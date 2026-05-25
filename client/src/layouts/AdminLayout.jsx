@@ -11,7 +11,6 @@ const LINKS = [
   { to: "/admin/maintenance",    label: "Maintenance"    },
   { to: "/admin/guests",         label: "Guests"         },
   { to: "/admin/calendar",       label: "Calendar"       },
-  { to: "/admin/activity",       label: "Activity Log"   },
   { to: "/admin/sunbeds",        label: "Pool & Sunbeds" },
 ];
 

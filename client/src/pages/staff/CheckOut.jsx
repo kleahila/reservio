@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getReservations, updateReservationStatus } from '../../api/reservations';
+import { getReservations, checkOutReservation } from '../../api/reservations';
+
+function fmt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function CheckOut() {
   const [reservations, setReservations] = useState([]);
@@ -14,7 +19,7 @@ export default function CheckOut() {
 
   async function handleCheckOut(id) {
     try {
-      await updateReservationStatus(id, 'CHECKED_OUT');
+      await checkOutReservation(id);
       setReservations((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       alert(err.message);
@@ -49,9 +54,12 @@ export default function CheckOut() {
               key={r.id}
               className="flex items-center justify-between rounded-xl border border-rv-border bg-rv-surface p-4"
             >
-              <div>
+              <div className="space-y-0.5">
                 <p className="font-semibold text-rv-text">{r.guest?.fullName ?? 'Guest'}</p>
-                <p className="text-sm text-rv-muted">Room {r.room?.description} · checked in {r.checkIn}</p>
+                <p className="text-sm text-rv-muted">
+                  {r.room?.type} · Room {r.room?.number ?? '—'}
+                </p>
+                <p className="text-xs text-rv-muted">Checked in {fmt(r.checkIn)}</p>
               </div>
               <button
                 onClick={() => handleCheckOut(r.id)}
