@@ -75,9 +75,16 @@ export default function TenantManagement() {
     const isSuspended = suspendTarget.status === 'Suspended' || suspendTarget.status === 'SUSPENDED';
     setWorking(id);
     try {
-      await suspendTenant(id);
+      // suspendTarget direction: if currently suspended we're reactivating
+      // (call approve), otherwise we're suspending. Both endpoints accept
+      // PATCH and PUT on the backend.
+      if (isSuspended) {
+        await approveTenant(id);
+      } else {
+        await suspendTenant(id);
+      }
       const nextStatus = isSuspended ? 'Active' : 'Suspended';
-      setTenants((t) => t.map((x) => x.id === id ? { ...x, status: nextStatus } : x));
+      setTenants((t) => t.map((x) => x.id === id ? { ...x, status: nextStatus, active: !isSuspended } : x));
       showToast(`${suspendTarget.name} ${isSuspended ? 'reactivated' : 'suspended'}.`);
       setSuspendTarget(null);
     } catch (err) {
