@@ -115,6 +115,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={['TECHNICIAN']} />}>
         <Route path="/technician" element={<TechnicianLayout />}>
           <Route path="tasks" element={<TechnicianTasks />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
       </Route>
 

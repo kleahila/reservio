@@ -2,10 +2,23 @@ import { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
-import { getRooms, createRoom, updateRoom, deleteRoom } from '../../api/rooms';
+import { apiCall } from '../../api/client';
+import { createRoom, updateRoom, deleteRoom } from '../../api/rooms';
 import { getRoomBlocks, createRoomBlock, deleteRoomBlock } from '../../api/roomBlocks';
 
-const STATUSES = ['Available', 'Occupied', 'Maintenance'];
+// Each option pairs the DB enum value with a display label.
+const STATUSES = [
+  { value: 'AVAILABLE',   label: 'Available' },
+  { value: 'OCCUPIED',    label: 'Occupied' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+];
+
+// Friendlier display for the status badge.
+const STATUS_LABEL = {
+  AVAILABLE: 'Available',
+  OCCUPIED: 'Occupied',
+  MAINTENANCE: 'Maintenance',
+};
 
 const inputCls =
   'w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2.5 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-accent/40';
@@ -17,7 +30,7 @@ export default function RoomManagement() {
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [addModal, setAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({ type: '', floor: '', pricePerNight: '', status: 'Available', description: '' });
+  const [addForm, setAddForm] = useState({ type: '', floor: '', pricePerNight: '', status: 'AVAILABLE', description: '' });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -29,7 +42,7 @@ export default function RoomManagement() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getRooms(), getRoomBlocks()])
+    Promise.all([apiCall('GET', '/api/rooms', undefined, true), getRoomBlocks()])
       .then(([roomData, blockData]) => {
         if (!cancelled) {
           setRooms(roomData || []);
@@ -99,7 +112,7 @@ export default function RoomManagement() {
       setRooms((r) => [...r, newRoom]);
       showToast(`${newRoom.type || addForm.type} added.`);
       setAddModal(false);
-      setAddForm({ type: '', floor: '', pricePerNight: '', status: 'Available', description: '' });
+      setAddForm({ type: '', floor: '', pricePerNight: '', status: 'AVAILABLE', description: '' });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -163,7 +176,7 @@ export default function RoomManagement() {
                   <td className="px-5 py-3 font-medium text-rv-text">{room.type}</td>
                   <td className="px-5 py-3 text-rv-muted">Floor {room.floor}</td>
                   <td className="px-5 py-3 text-rv-text">${room.pricePerNight}</td>
-                  <td className="px-5 py-3"><StatusBadge status={room.status} /></td>
+                  <td className="px-5 py-3"><StatusBadge status={STATUS_LABEL[room.status] || room.status} /></td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => openEdit(room)} className="rounded-lg bg-rv-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-rv-accent/90">
@@ -215,7 +228,7 @@ export default function RoomManagement() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-rv-text">Status</label>
               <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
-                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div className="flex justify-end gap-2">
@@ -248,7 +261,7 @@ export default function RoomManagement() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-rv-text">Status</label>
             <select value={addForm.status} onChange={(e) => setAddForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div>

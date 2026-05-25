@@ -2,7 +2,7 @@ import PortalLayout from "./PortalLayout";
 
 const LINKS = [
   { to: "/technician/tasks", label: "My Tasks" },
-  { to: "/guest/profile",    label: "Profile" },
+  { to: "/technician/profile", label: "Profile" },
 ];
 
 export default function TechnicianLayout() {

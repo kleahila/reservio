@@ -15,7 +15,7 @@ export default function StaffManagement() {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'RECEPTIONIST' });
+  const [form, setForm] = useState({ fullName: '', email: '', role: 'RECEPTIONIST' });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -38,7 +38,7 @@ export default function StaffManagement() {
 
   function validate() {
     const e = {};
-    if (!form.name.trim()) e.name = 'Name is required.';
+    if (!(form.fullName || '').trim()) e.fullName = 'Name is required.';
     if (!form.email.includes('@')) e.email = 'Valid email is required.';
     return e;
   }
@@ -56,14 +56,14 @@ export default function StaffManagement() {
 
   function openAdd() {
     setEditTarget(null);
-    setForm({ name: '', email: '', role: 'RECEPTIONIST' });
+    setForm({ fullName: '', email: '', role: 'RECEPTIONIST' });
     setErrors({});
     setShowModal(true);
   }
 
   function openEdit(member) {
     setEditTarget(member);
-    setForm({ name: member.name, email: member.email, role: member.role });
+    setForm({ fullName: member.fullName ?? member.name ?? '', email: member.email ?? '', role: member.role });
     setErrors({});
     setShowModal(true);
   }
@@ -82,7 +82,11 @@ export default function StaffManagement() {
       } else {
         const newMember = await createStaff(form);
         setStaff((s) => [...s, newMember]);
-        showToast(`Invite sent to ${form.email}`);
+        if (newMember.tempPassword) {
+          showToast(`Staff added. Temporary password: ${newMember.tempPassword} — share with ${form.email}`);
+        } else {
+          showToast(`Invite sent to ${form.email}`);
+        }
       }
       setShowModal(false);
     } catch (err) {
@@ -96,7 +100,7 @@ export default function StaffManagement() {
     try {
       await deactivateStaff(member.id);
       setStaff((s) => s.map((m) => m.id === member.id ? { ...m, status: 'Inactive' } : m));
-      showToast(`${member.name} deactivated.`);
+      showToast(`${member.fullName ?? member.name ?? 'Staff'} deactivated.`);
     } catch (err) {
       setError(err.message);
     }
@@ -183,8 +187,8 @@ export default function StaffManagement() {
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-rv-text">Full name</label>
-            <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Jane Smith" className={inputCls} />
-            {errors.name && <p className="mt-1 text-xs text-rv-danger">{errors.name}</p>}
+            <input value={form.fullName} onChange={(e) => set('fullName', e.target.value)} placeholder="Jane Smith" className={inputCls} />
+            {errors.fullName && <p className="mt-1 text-xs text-rv-danger">{errors.fullName}</p>}
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-rv-text">Email</label>
