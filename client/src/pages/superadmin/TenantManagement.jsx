@@ -4,7 +4,13 @@ import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 import { getTenants, approveTenant, suspendTenant, deleteTenant, changePlan } from '../../api/superadmin';
 
-const PLANS = ['Basic', 'Premium', 'Custom'];
+const PLANS = [
+  { value: 'BASIC',   label: 'Basic' },
+  { value: 'PREMIUM', label: 'Premium' },
+  { value: 'CUSTOM',  label: 'Custom' },
+];
+
+const PLAN_LABEL = { BASIC: 'Basic', PREMIUM: 'Premium', CUSTOM: 'Custom' };
 
 export default function TenantManagement() {
   const [tenants, setTenants] = useState([]);
@@ -128,7 +134,7 @@ export default function TenantManagement() {
         <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)}
           className="rounded-lg border border-rv-border2 bg-rv-surface px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-accent/40">
           <option value="All">All plans</option>
-          {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+          {PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-lg border border-rv-border2 bg-rv-surface px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-accent/40">
@@ -161,7 +167,7 @@ export default function TenantManagement() {
                   <td className="px-5 py-3">
                     <select value={tenant.plan} onChange={(e) => handleChangePlan(tenant.id, e.target.value)}
                       className="rounded-lg border border-rv-border2 bg-rv-bg px-2 py-1 text-xs text-rv-text outline-none focus:ring-1 focus:ring-rv-accent/40">
-                      {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+                      {PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                     </select>
                   </td>
                   <td className="px-5 py-3"><StatusBadge status={tenant.status} /></td>
