@@ -25,5 +25,5 @@ export function changePlan(id, plan) {
 }
 
 export function getStats() {
-  return apiCall('GET', '/api/admin/stats', undefined, true);
+  return apiCall('GET', '/api/admin/analytics', undefined, true);
 }

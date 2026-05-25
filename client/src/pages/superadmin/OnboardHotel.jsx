@@ -6,7 +6,13 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-const PLANS = ['Basic', 'Premium', 'Custom'];
+const PLANS = [
+  { value: 'BASIC',   label: 'Basic' },
+  { value: 'PREMIUM', label: 'Premium' },
+  { value: 'CUSTOM',  label: 'Custom' },
+];
+
+const PLAN_LABEL = { BASIC: 'Basic', PREMIUM: 'Premium', CUSTOM: 'Custom' };
 
 const inputCls = (err) =>
   `w-full rounded-lg border px-3 py-2.5 text-sm bg-rv-bg text-rv-text placeholder:text-rv-subtle outline-none focus:ring-2 focus:ring-rv-accent/40 ${
@@ -15,7 +21,7 @@ const inputCls = (err) =>
 
 export default function OnboardHotel() {
   const [tenants, setTenants] = useState([]);
-  const [form, setForm] = useState({ name: '', subdomain: '', email: '', plan: 'Basic' });
+  const [form, setForm] = useState({ name: '', subdomain: '', email: '', plan: 'BASIC' });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -60,7 +66,7 @@ export default function OnboardHotel() {
       });
       setTenants((t) => [...t, newTenant]);
       setAdded(newTenant);
-      setForm({ name: '', subdomain: '', email: '', plan: 'Basic' });
+      setForm({ name: '', subdomain: '', email: '', plan: 'BASIC' });
     } catch (err) {
       setApiError(err.message || 'Failed to onboard hotel.');
     } finally {
@@ -113,7 +119,7 @@ export default function OnboardHotel() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-rv-text">Subscription plan</label>
               <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={inputCls(false)}>
-                {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+                {PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </div>
             <button type="submit" disabled={saving} className="w-full rounded-lg bg-rv-accent py-2.5 text-sm font-semibold text-white hover:bg-rv-accent/90 disabled:opacity-50">
@@ -129,7 +135,7 @@ export default function OnboardHotel() {
               <div key={t.id} className="flex items-center justify-between rounded-xl border border-rv-border bg-rv-surface px-4 py-3">
                 <div>
                   <p className="font-medium text-rv-text">{t.name}</p>
-                  <p className="text-xs text-rv-muted">{t.subdomain}.reservio.com &middot; {t.plan}</p>
+                  <p className="text-xs text-rv-muted">{t.subdomain}.reservio.com &middot; {PLAN_LABEL[t.plan] ?? t.plan}</p>
                 </div>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                   (t.status === 'Active' || t.status === 'ACTIVE')       ? 'bg-rv-success-soft text-rv-success'  :
