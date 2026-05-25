@@ -4,7 +4,7 @@ const roleGuard = require('../middleware/roleGuard');
 const { getTenantClient } = require('../prisma/tenantClient');
 const { emit } = require('../socket');
 
-router.get('/', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'HOTEL_ADMIN'), async (req, res) => {
+router.get('/', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     const tasks = await db.housekeepingTask.findMany({
@@ -18,7 +18,7 @@ router.get('/', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'HOTEL_ADMIN')
   }
 });
 
-router.put('/:id/urgent', authMiddleware, roleGuard('STAFF'), async (req, res) => {
+router.put('/:id/urgent', authMiddleware, roleGuard('STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     const task = await db.housekeepingTask.update({
@@ -36,7 +36,7 @@ router.put('/:id/urgent', authMiddleware, roleGuard('STAFF'), async (req, res) =
   }
 });
 
-router.put('/:id/complete', authMiddleware, roleGuard('HOUSEKEEPER'), async (req, res) => {
+router.put('/:id/complete', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     const task = await db.housekeepingTask.update({
@@ -62,6 +62,21 @@ router.put('/:id/complete', authMiddleware, roleGuard('HOUSEKEEPER'), async (req
       emit(req.tenant.id, 'earlyCheckinAlert', { roomId: task.roomId, guestUserId: r.userId });
     }
 
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id/assign', authMiddleware, roleGuard('STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
+  const { staffId } = req.body;
+  const db = getTenantClient(req.tenant.id);
+  try {
+    const task = await db.housekeepingTask.update({
+      where: { id: req.params.id },
+      data: { assignedTo: staffId ?? null },
+      include: { room: true },
+    });
     res.json(task);
   } catch (err) {
     res.status(500).json({ error: err.message });

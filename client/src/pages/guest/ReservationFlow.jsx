@@ -43,7 +43,7 @@ export default function ReservationFlow() {
     setSubmitError('');
     try {
       const result = await createReservation({
-        roomId: Number(roomId),
+        roomId: roomId,
         checkIn: form.checkIn,
         checkOut: form.checkOut,
         notes: form.notes,

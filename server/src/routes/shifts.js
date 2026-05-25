@@ -46,6 +46,20 @@ router.post('/clockout', authMiddleware, roleGuard(...CLOCK_ROLES), async (req, 
   }
 });
 
+router.get('/last-handover', authMiddleware, roleGuard(...CLOCK_ROLES), async (req, res) => {
+  const db = getTenantClient(req.tenant.id);
+  try {
+    const shift = await db.staffShift.findFirst({
+      where: { tenantId: req.tenant.id, clockOut: { not: null }, note: { not: null } },
+      orderBy: { clockOut: 'desc' },
+      include: { user: { select: { fullName: true } } },
+    });
+    res.json(shift ?? null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/my', authMiddleware, roleGuard(...CLOCK_ROLES), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {

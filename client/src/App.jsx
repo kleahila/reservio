@@ -29,7 +29,6 @@ import Profile from './pages/guest/Profile';
 import HotelSignup from './pages/HotelSignup';
 
 // ── STAFF PORTAL ──────────────────────────────────────────────────────────────
-import StaffLogin from './pages/staff/StaffLogin';
 import ReservationDashboard from './pages/staff/ReservationDashboard';
 import ReservationList from './pages/staff/ReservationList';
 import RoomStatusGrid from './pages/staff/RoomStatusGrid';
@@ -93,7 +92,7 @@ export default function App() {
       </Route>
 
       {/* Legacy login pages — kept public for direct access */}
-      <Route path="/staff/login" element={<StaffLogin />} />
+      <Route path="/staff/login" element={<Navigate to="/login" replace />} />
       <Route path="/housekeeper/login" element={<HousekeeperLogin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/superadmin/login" element={<SuperAdminLogin />} />

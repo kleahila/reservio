@@ -7,10 +7,10 @@ const OFFSET  = 7;    // days before today shown on left
 
 // ── Status colors for booking blocks ─────────────────────────────────────────
 const BLOCK = {
-  Confirmed:  "bg-rv-sea/75 border-rv-sea/50 text-white",
-  CheckedIn:  "bg-rv-accent/80 border-rv-accent/50 text-white",
-  Pending:    "bg-rv-warning/45 border-rv-warning/35 text-rv-text",
-  CheckedOut: "bg-rv-surface2 border-rv-border text-rv-muted",
+  CONFIRMED:   "bg-rv-sea/75 border-rv-sea/50 text-white",
+  CHECKED_IN:  "bg-rv-accent/80 border-rv-accent/50 text-white",
+  PENDING:     "bg-rv-warning/45 border-rv-warning/35 text-rv-text",
+  CHECKED_OUT: "bg-rv-surface2 border-rv-border text-rv-muted",
 };
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -33,12 +33,12 @@ function Block({ reservation, left, width, onUpdate }) {
   const ref = useRef({ startX: 0, origCheckIn: "", origCheckOut: "" });
 
   const origin = useMemo(rangeStart, []);
-  const colorCls = BLOCK[reservation.status] ?? BLOCK.Pending;
+  const colorCls = BLOCK[reservation.status] ?? BLOCK.PENDING;
   const nights   = Math.round(width / DAY_PX);
 
   // ── Drag to move ─────────────────────────────────────────────────────
   function startDrag(e) {
-    if (reservation.status === "CheckedOut") return;
+    if (reservation.status === "CHECKED_OUT") return;
     e.preventDefault();
     setDragging(true);
     ref.current = {
@@ -109,18 +109,20 @@ function Block({ reservation, left, width, onUpdate }) {
       <div className="flex items-center gap-1.5 px-2.5 overflow-hidden flex-1">
         {hover ? (
           <>
-            <span className="text-[10px] font-semibold truncate">{reservation.guestName}</span>
+            <span className="text-[10px] font-semibold truncate">
+              {reservation.guest?.fullName ?? reservation.guestName ?? "—"}
+            </span>
             {nights > 0 && <span className="text-[9px] opacity-60 shrink-0">{nights}n</span>}
           </>
         ) : (
           <span className="text-[10px] font-semibold truncate">
-            {reservation.guestName.split(" ")[0]}
+            {(reservation.guest?.fullName ?? reservation.guestName ?? "—").split(" ")[0]}
           </span>
         )}
       </div>
 
       {/* Resize handle — right edge */}
-      {reservation.status !== "CheckedOut" && (
+      {reservation.status !== "CHECKED_OUT" && (
         <div
           className="absolute right-0 top-0 bottom-0 w-3 flex items-center justify-center
                      opacity-0 hover:opacity-100 cursor-e-resize transition-opacity"
@@ -186,7 +188,7 @@ export default function BookingTimeline({ rooms, reservations, onReservationUpda
       {/* ── Room rows ───────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
         {rooms.map((room) => {
-          const roomRes   = reservations.filter((r) => r.roomId === room.id && r.status !== "CheckedOut");
+          const roomRes   = reservations.filter((r) => r.roomId === room.id && r.status !== "CHECKED_OUT");
           const isSelected = selectedRoomId === room.id;
 
           return (
@@ -202,8 +204,10 @@ export default function BookingTimeline({ rooms, reservations, onReservationUpda
                 className="w-[148px] shrink-0 flex items-center px-3 gap-2 border-r border-rv-border/50 text-left"
                 onClick={() => onRoomSelect(isSelected ? null : room.id)}
               >
-                <span className="font-mono text-[11px] font-bold text-rv-text">{room.roomNumber}</span>
-                <span className="text-[9px] text-rv-muted truncate">{room.type.split(" ")[0]}</span>
+                <span className="font-mono text-[11px] font-bold text-rv-text">
+                  {room.roomNumber ?? room.type?.slice(0, 4).toUpperCase()}
+                </span>
+                <span className="text-[9px] text-rv-muted truncate">{room.type}</span>
               </button>
 
               {/* Booking track */}

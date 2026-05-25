@@ -7,9 +7,10 @@ const { generateUsername } = require('../utils/generateUsername');
 const { logActivity } = require('../services/activityLog');
 
 const guard = [authMiddleware, roleGuard('HOTEL_ADMIN')];
+const readGuard = [authMiddleware, roleGuard('HOTEL_ADMIN', 'MANAGER', 'RECEPTIONIST')];
 const ALLOWED_ROLES = ['RECEPTIONIST', 'HOUSEKEEPER', 'TECHNICIAN', 'MANAGER', 'STAFF'];
 
-router.get('/', ...guard, async (req, res) => {
+router.get('/', ...readGuard, async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     const staff = await db.user.findMany({

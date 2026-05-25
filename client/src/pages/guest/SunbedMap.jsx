@@ -10,7 +10,7 @@ const SLOTS = [
 ];
 
 function SunbedButton({ bed, selected, onSelect, disabled }) {
-  const isAvail = bed.status === 'AVAILABLE' || bed.status === 'Available';
+  const isAvail = bed.status?.toUpperCase() === 'AVAILABLE';
   return (
     <button
       onClick={() => isAvail && !disabled && onSelect(bed)}
@@ -123,7 +123,7 @@ export default function SunbedMap() {
     setLocking(true);
     try {
       await lockSunbed(bed.id);
-      setSunbeds((prev) => prev.map((s) => s.id === bed.id ? { ...s, status: 'Reserved' } : s));
+      setSunbeds((prev) => prev.map((s) => s.id === bed.id ? { ...s, status: 'RESERVED' } : s));
       setSelected(bed);
       setLockedId(bed.id);
     } catch (err) { setError(err.message); }

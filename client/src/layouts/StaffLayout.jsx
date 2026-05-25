@@ -5,7 +5,7 @@ import ThemeToggle from "../components/ThemeToggle";
 import Footer from "../components/Footer";
 import NotificationBell from "../components/NotificationBell";
 import { useAuth } from "../hooks/useAuth";
-import { clockIn, clockOut, getMyShifts } from "../api/shifts";
+import { clockIn, clockOut, getMyShifts, getLastHandover } from "../api/shifts";
 
 function AmbientClock() {
   const [time, setTime] = useState(new Date());
@@ -58,7 +58,26 @@ export default function StaffLayout() {
   const [clockLoading, setClockLoading] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [note, setNote] = useState('');
+  const [handover, setHandover] = useState(null);
+  const [hotelName, setHotelName] = useState(
+    () => localStorage.getItem('rv_tenant_name') || ''
+  );
   useAmbientMode();
+
+  useEffect(() => {
+    if (hotelName) return;
+    const subdomain = localStorage.getItem('rv_tenant') || 'grandtirana';
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/public/tenants`)
+      .then((r) => r.json())
+      .then((tenants) => {
+        const match = (tenants || []).find((t) => t.subdomain === subdomain);
+        if (match?.name) {
+          localStorage.setItem('rv_tenant_name', match.name);
+          setHotelName(match.name);
+        }
+      })
+      .catch(() => {});
+  }, [hotelName]);
 
   useEffect(() => {
     getMyShifts()
@@ -66,6 +85,9 @@ export default function StaffLayout() {
         const open = (shifts || []).find((s) => !s.clockOut);
         setOpenShift(open ?? null);
       })
+      .catch(() => {});
+    getLastHandover()
+      .then((shift) => { if (shift?.note) setHandover(shift); })
       .catch(() => {});
   }, []);
 
@@ -117,7 +139,7 @@ export default function StaffLayout() {
             <span className="text-[10px] font-bold text-rv-olive">H</span>
           </div>
           <span className="font-serif text-[13px] font-semibold text-rv-text tracking-wide whitespace-nowrap">
-            Grand Hotel
+            {hotelName || 'Hotel'}
           </span>
         </div>
 
@@ -171,6 +193,21 @@ export default function StaffLayout() {
 
       <div id="rv-ambient" className="rv-ambient" />
       {cmdOpen && <CommandBar onClose={() => setCmdOpen(false)} />}
+
+      {handover && (
+        <div className="fixed bottom-16 left-1/2 z-40 -translate-x-1/2 w-full max-w-md px-4">
+          <div className="rounded-xl border border-rv-olive/30 bg-rv-surface shadow-lg px-4 py-3 flex items-start gap-3">
+            <span className="mt-0.5 text-rv-olive text-[15px]">📋</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-rv-olive mb-0.5">
+                Handover note from {handover.user?.fullName ?? 'previous shift'}
+              </p>
+              <p className="text-[12px] text-rv-text leading-snug">{handover.note}</p>
+            </div>
+            <button onClick={() => setHandover(null)} className="text-rv-muted hover:text-rv-text text-[14px] shrink-0">✕</button>
+          </div>
+        </div>
+      )}
 
       {showNoteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

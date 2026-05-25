@@ -14,14 +14,15 @@ function CarIcon() {
 }
 
 function SpotCard({ spot, selected, onSelect, disabled }) {
+  const normalizedStatus = spot.status?.toUpperCase();
   const statusColor =
-    spot.status === 'AVAILABLE' || spot.status === 'Available'
+    normalizedStatus === 'AVAILABLE'
       ? 'border-rv-olive-400/60 bg-rv-olive-50 dark:bg-rv-olive-900/20 cursor-pointer hover:border-rv-olive-500'
-      : spot.status === 'LOCKED' || spot.status === 'Reserved'
+      : normalizedStatus === 'LOCKED' || normalizedStatus === 'RESERVED'
       ? 'border-rv-warning/50 bg-rv-warning-soft cursor-not-allowed opacity-70'
       : 'border-rv-danger/40 bg-rv-danger-soft cursor-not-allowed opacity-60';
 
-  const isAvail = spot.status === 'AVAILABLE' || spot.status === 'Available';
+  const isAvail = normalizedStatus === 'AVAILABLE';
 
   return (
     <button
@@ -108,7 +109,7 @@ export default function ParkingMap() {
     return () => clearInterval(timerRef.current);
   }, [lockedId]);
 
-  const available = spots.filter((s) => s.status === 'AVAILABLE' || s.status === 'Available').length;
+  const available = spots.filter((s) => s.status?.toUpperCase() === 'AVAILABLE').length;
   const taken     = spots.length - available;
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -116,7 +117,7 @@ export default function ParkingMap() {
     setLocking(true);
     try {
       await lockSpot(spot.id);
-      setSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, status: 'Reserved' } : s));
+      setSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, status: 'RESERVED' } : s));
       setSelected(spot);
       setLockedId(spot.id);
     } catch (err) { setError(err.message); }
