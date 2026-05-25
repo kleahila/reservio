@@ -98,7 +98,15 @@ router.put('/:id', authMiddleware, roleGuard('HOTEL_ADMIN', 'STAFF'), async (req
   try {
     const room = await db.room.update({
       where: { id: req.params.id },
-      data: { type, description, pricePerNight, photos, status },
+      data: {
+        type,
+        description,
+        pricePerNight,
+        photos,
+        // Coerce to the uppercase enum (AVAILABLE | OCCUPIED | MAINTENANCE)
+        // so older callers sending "Occupied" don't crash Prisma.
+        status: status ? String(status).toUpperCase() : undefined,
+      },
     });
     res.json(room);
   } catch (err) {
@@ -106,18 +114,26 @@ router.put('/:id', authMiddleware, roleGuard('HOTEL_ADMIN', 'STAFF'), async (req
   }
 });
 
-router.put('/:id/status', authMiddleware, roleGuard('STAFF', 'HOTEL_ADMIN'), async (req, res) => {
+// Both PUT and PATCH so the frontend's PATCH /:id/status reaches the handler.
+async function updateRoomStatusHandler(req, res) {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'status required' });
   const db = getTenantClient(req.tenant.id);
   try {
-    const room = await db.room.update({ where: { id: req.params.id }, data: { status } });
+    const room = await db.room.update({
+      where: { id: req.params.id },
+      data: { status: String(status).toUpperCase() },
+    });
     emit(req.tenant.id, 'roomStatusUpdated', { roomId: room.id, status: room.status });
     res.json(room);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
+router
+  .route('/:id/status')
+  .put(authMiddleware, roleGuard('STAFF', 'HOTEL_ADMIN'), updateRoomStatusHandler)
+  .patch(authMiddleware, roleGuard('STAFF', 'HOTEL_ADMIN'), updateRoomStatusHandler);
 
 router.delete('/:id', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
@@ -125,6 +141,17 @@ router.delete('/:id', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res)
     await db.room.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
+    // Foreign-key violation: room has reservations, tasks, blocks, etc.
+    if (
+      err.code === 'P2003' ||
+      err.code === 'P2014' ||
+      /foreign key|constraint|violates/i.test(err.message || '')
+    ) {
+      return res.status(409).json({
+        error:
+          'This room has reservations, housekeeping tasks, or other records linked to it and cannot be deleted. To take it out of service, use "Block Dates" on the room card instead.',
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 });

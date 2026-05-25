@@ -39,13 +39,66 @@ export default function AnalyticsDashboard() {
   const occupiedRooms = summary?.occupiedRooms ?? 0;
   const totalRooms = summary?.totalRooms ?? 0;
 
+  function handleExport() {
+    if (!summary) return;
+    const csvLine = (cells) =>
+      cells
+        .map((c) => {
+          const s = String(c ?? '');
+          return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        })
+        .join(',');
+
+    const lines = [];
+    lines.push(csvLine(['Reservio — Analytics Export']));
+    lines.push(csvLine(['Generated', new Date().toISOString()]));
+    lines.push(csvLine(['From', fromDate || 'all-time']));
+    lines.push(csvLine(['To', toDate || 'all-time']));
+    lines.push('');
+    lines.push(csvLine(['KPIs']));
+    lines.push(csvLine(['Metric', 'Value']));
+    lines.push(csvLine(['Total Bookings', totalBookings]));
+    lines.push(csvLine(['Occupancy %', occupancyPct]));
+    lines.push(csvLine(['Occupied Rooms', occupiedRooms]));
+    lines.push(csvLine(['Total Rooms', totalRooms]));
+    lines.push('');
+    if (bookingsByDay.length > 0) {
+      lines.push(csvLine(['Check-ins per Day']));
+      lines.push(csvLine(['Date', 'Count']));
+      bookingsByDay.forEach((d) => lines.push(csvLine([d.date, d.count])));
+      lines.push('');
+    }
+    const statusEntries = Object.entries(statusCounts);
+    if (statusEntries.length > 0) {
+      lines.push(csvLine(['Reservation Status Breakdown']));
+      lines.push(csvLine(['Status', 'Count']));
+      statusEntries.forEach(([k, v]) => lines.push(csvLine([k, v])));
+    }
+
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = `${fromDate || 'all'}_${toDate || 'all'}`;
+    a.download = `reservio-analytics-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="px-6 md:px-10 lg:px-16 py-8">
       <PageHeader
         title="Analytics"
         subtitle="Hotel performance overview. Use date range to filter."
         action={
-          <button className="rounded-lg border border-rv-border2 bg-rv-surface px-4 py-2 text-sm font-medium text-rv-muted hover:text-rv-text">
+          <button
+            onClick={handleExport}
+            disabled={!summary}
+            className="rounded-lg border border-rv-border2 bg-rv-surface px-4 py-2 text-sm font-medium text-rv-muted hover:text-rv-text disabled:opacity-50"
+          >
             Export
           </button>
         }
