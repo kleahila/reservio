@@ -9,6 +9,20 @@ function formatTime(d) {
   return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatMetadata(raw) {
+  if (!raw) return '—';
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const entries = Object.entries(obj).filter(([, v]) => v !== null && v !== undefined && v !== '');
+    if (entries.length === 0) return '—';
+    return entries
+      .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+      .join(', ');
+  } catch {
+    return String(raw);
+  }
+}
+
 const STATUS_CLS = {
   AVAILABLE:   'bg-rv-olive-50 text-rv-olive-700 dark:bg-rv-olive-900/30 dark:text-rv-olive-300',
   OCCUPIED:    'bg-rv-sea-50 text-rv-sea-700 dark:bg-rv-sea-900/20 dark:text-rv-sea-300',
@@ -107,7 +121,7 @@ export default function CommandCenter() {
               </tr>
             </thead>
             <tbody className="divide-y divide-rv-border">
-              {rooms.slice(0, 8).map((r) => (
+              {rooms.map((r) => (
                 <tr key={r.id} className="hover:bg-rv-surface2">
                   <td className="px-4 py-2 font-mono text-rv-muted">{r.description}</td>
                   <td className="px-4 py-2 text-rv-text">{r.type}</td>
@@ -225,7 +239,7 @@ export default function CommandCenter() {
                   <tr key={l.id} className="hover:bg-rv-surface2">
                     <td className="px-4 py-2 text-rv-muted whitespace-nowrap">{formatTime(l.createdAt)}</td>
                     <td className="px-4 py-2 font-mono text-rv-text">{l.action}</td>
-                    <td className="px-4 py-2 text-rv-muted max-w-[240px] truncate">{l.metadata ?? '—'}</td>
+                    <td className="px-4 py-2 text-rv-muted max-w-[240px] truncate">{formatMetadata(l.metadata)}</td>
                   </tr>
                 ))}
               </tbody>
