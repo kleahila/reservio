@@ -1,24 +1,26 @@
 // KeycardPanel — right-side sliding panel for booking / room details.
-// Styled to feel like placing a physical folder on a hotel desk.
 
 const STATUS_DISPLAY = {
-  Available:   { dot: "bg-rv-olive",   label: "Ready",       labelCls: "text-rv-olive"   },
-  Occupied:    { dot: "bg-rv-accent",  label: "Occupied",    labelCls: "text-rv-accent"  },
-  Cleaning:    { dot: "bg-rv-warning", label: "Cleaning",    labelCls: "text-rv-warning" },
-  Maintenance: { dot: "bg-rv-muted",   label: "Maintenance", labelCls: "text-rv-muted"   },
+  AVAILABLE:   { dot: "bg-rv-olive",   label: "Ready",       labelCls: "text-rv-olive"   },
+  OCCUPIED:    { dot: "bg-rv-accent",  label: "Occupied",    labelCls: "text-rv-accent"  },
+  MAINTENANCE: { dot: "bg-rv-muted",   label: "Maintenance", labelCls: "text-rv-muted"   },
 };
 
 const RES_ACTIONS = {
-  Confirmed: { label: "Check In Guest",  next: "CheckedIn"  },
-  CheckedIn: { label: "Check Out Guest", next: "CheckedOut" },
+  PENDING:    { label: "Confirm Reservation", next: "CONFIRMED"   },
+  CONFIRMED:  { label: "Check In Guest",      next: "CHECKED_IN"  },
+  CHECKED_IN: { label: "Check Out Guest",     next: "CHECKED_OUT" },
 };
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 // ── Guest avatar ──────────────────────────────────────────────────────────────
 function GuestAvatar({ name, size = "lg" }) {
-  const initials = name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  const cls = size === "lg"
-    ? "w-10 h-10 text-[13px]"
-    : "w-7 h-7 text-[10px]";
+  const initials = (name || "?").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  const cls = size === "lg" ? "w-10 h-10 text-[13px]" : "w-7 h-7 text-[10px]";
   return (
     <div
       className={`${cls} rounded-full shrink-0 flex items-center justify-center font-bold`}
@@ -37,7 +39,7 @@ function StayProgress({ checkIn, checkOut }) {
   const total = co - ci;
   const pct   = total > 0 ? Math.max(0, Math.min(100, ((now - ci) / total) * 100)) : 0;
   const nights = Math.round(total / 86_400_000);
-  const done   = Math.round((now - ci) / 86_400_000);
+  const done   = Math.max(0, Math.round((now - ci) / 86_400_000));
 
   return (
     <div>
@@ -71,14 +73,14 @@ function Field({ label, value, mono }) {
 export default function KeycardPanel({ room, reservation, onClose, onStatusChange, onReservationTransition }) {
   if (!room) return null;
 
-  const statusDisp  = STATUS_DISPLAY[room.status] ?? STATUS_DISPLAY.Available;
-  const resAction   = reservation ? RES_ACTIONS[reservation.status] : null;
+  const statusDisp = STATUS_DISPLAY[room.status] ?? STATUS_DISPLAY.AVAILABLE;
+  const resAction  = reservation ? RES_ACTIONS[reservation.status] : null;
 
-  // Nights remaining for occupied rooms
-  const today = new Date().toISOString().split("T")[0];
   const nightsLeft = reservation
     ? Math.max(0, Math.round((new Date(reservation.checkOut) - new Date()) / 86_400_000))
     : null;
+
+  const guestName = reservation?.guest?.fullName ?? reservation?.guestName ?? "Guest";
 
   return (
     <aside className="keycard-slide-in w-72 shrink-0 flex flex-col border-l border-rv-border bg-rv-surface overflow-y-auto">
@@ -88,7 +90,7 @@ export default function KeycardPanel({ room, reservation, onClose, onStatusChang
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-rv-subtle">
-              Room {room.roomNumber}
+              {room.roomNumber ? `Room ${room.roomNumber}` : room.type}
             </p>
             <h2 className="font-serif text-[19px] text-rv-text mt-0.5 leading-tight">
               {room.type}
@@ -117,28 +119,26 @@ export default function KeycardPanel({ room, reservation, onClose, onStatusChang
         <div className="px-5 py-4 border-b border-rv-border space-y-4">
           {/* Guest identity */}
           <div className="flex items-center gap-3">
-            <GuestAvatar name={reservation.guestName} />
+            <GuestAvatar name={guestName} />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-rv-text truncate">
-                {reservation.guestName}
-              </p>
+              <p className="text-[13px] font-semibold text-rv-text truncate">{guestName}</p>
               {reservation.phone && (
                 <p className="text-[11px] text-rv-muted font-mono mt-0.5">{reservation.phone}</p>
               )}
             </div>
           </div>
 
-          {/* Dates */}
+          {/* Dates — formatted, not raw ISO */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Check-in"  value={reservation.checkIn}  mono />
-            <Field label="Check-out" value={reservation.checkOut} mono />
+            <Field label="Check-in"  value={fmtDate(reservation.checkIn)} />
+            <Field label="Check-out" value={fmtDate(reservation.checkOut)} />
           </div>
           {reservation.guests && (
             <Field label="Guests" value={`${reservation.guests} ${reservation.guests === 1 ? "guest" : "guests"}`} />
           )}
 
           {/* Stay progress */}
-          {reservation.status === "CheckedIn" && (
+          {reservation.status === "CHECKED_IN" && (
             <StayProgress checkIn={reservation.checkIn} checkOut={reservation.checkOut} />
           )}
 
@@ -189,27 +189,18 @@ export default function KeycardPanel({ room, reservation, onClose, onStatusChang
 
         {/* Room status controls */}
         <div className="flex gap-2 flex-wrap">
-          {room.status !== "Cleaning" && room.status !== "Occupied" && (
+          {room.status === "AVAILABLE" && (
             <button
-              onClick={() => onStatusChange(room.id, "Cleaning")}
+              onClick={() => onStatusChange(room.id, "MAINTENANCE")}
               className="flex-1 py-2 rounded-xl border border-rv-border text-[12px] font-medium
                          text-rv-muted hover:text-rv-text hover:border-rv-border2 hover:bg-rv-surface2 transition-colors"
             >
               Assign Cleaning
             </button>
           )}
-          {room.status === "Cleaning" && (
+          {room.status === "MAINTENANCE" && (
             <button
-              onClick={() => onStatusChange(room.id, "Available")}
-              className="flex-1 py-2 rounded-xl border border-rv-border text-[12px] font-medium
-                         text-rv-muted hover:text-rv-text hover:border-rv-border2 hover:bg-rv-surface2 transition-colors"
-            >
-              Mark Ready
-            </button>
-          )}
-          {room.status === "Maintenance" && (
-            <button
-              onClick={() => onStatusChange(room.id, "Available")}
+              onClick={() => onStatusChange(room.id, "AVAILABLE")}
               className="flex-1 py-2 rounded-xl border border-rv-border text-[12px] font-medium
                          text-rv-muted hover:text-rv-text hover:border-rv-border2 hover:bg-rv-surface2 transition-colors"
             >
@@ -220,14 +211,14 @@ export default function KeycardPanel({ room, reservation, onClose, onStatusChang
       </div>
 
       {/* ── AI system hint ───────────────────────────────────────────────── */}
-      {room.status === "Cleaning" && (
+      {room.status === "MAINTENANCE" && (
         <div className="mx-5 mb-5 px-3.5 py-2.5 rounded-xl border border-rv-sea/20 bg-rv-sea/6">
           <p className="text-[10px] leading-relaxed" style={{ color: "rgb(var(--rv-sea))" }}>
             ✦ Should be ready within ~30 min based on typical cleaning duration
           </p>
         </div>
       )}
-      {reservation && nightsLeft === 1 && room.status === "Occupied" && (
+      {reservation && nightsLeft === 1 && room.status === "OCCUPIED" && (
         <div className="mx-5 mb-5 px-3.5 py-2.5 rounded-xl border border-rv-sea/20 bg-rv-sea/6">
           <p className="text-[10px] leading-relaxed" style={{ color: "rgb(var(--rv-sea))" }}>
             ✦ Guest checks out tomorrow — consider preparing the cleaning schedule

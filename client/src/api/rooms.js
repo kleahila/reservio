@@ -1,11 +1,11 @@
 import { apiCall } from './client';
 
-export function getRooms(checkIn, checkOut) {
+export function getRooms(checkIn, checkOut, requireAuth = false) {
   const params = new URLSearchParams();
   if (checkIn) params.set('checkIn', checkIn);
   if (checkOut) params.set('checkOut', checkOut);
   const query = params.toString() ? `?${params}` : '';
-  return apiCall('GET', `/api/rooms${query}`, undefined, false);
+  return apiCall('GET', `/api/rooms${query}`, undefined, requireAuth);
 }
 
 export function getRoom(id) {

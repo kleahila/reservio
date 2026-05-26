@@ -39,6 +39,10 @@ export default function Marketplace() {
 
   async function handleBook() {
     if (!booking) return;
+    if (!activeReservationId) {
+      setOrderError('No active reservation found. You must be checked in or have a confirmed reservation to order services.');
+      return;
+    }
     setOrdering(true);
     setOrderError('');
     try {
@@ -129,7 +133,7 @@ export default function Marketplace() {
               <span className="font-bold text-rv-text">${booking.price}</span>
             </div>
             {!activeReservationId && (
-              <p className="mb-3 text-xs text-rv-warning">No active or upcoming reservation found. Charge will be recorded without a reservation reference.</p>
+              <p className="mb-3 text-xs text-rv-warning">No active reservation found. You must be checked in or have a confirmed reservation to order services.</p>
             )}
             {orderError && (
               <p className="mb-3 rounded-lg border border-rv-danger/20 bg-rv-danger-soft px-3 py-2 text-sm text-rv-danger">
@@ -142,7 +146,7 @@ export default function Marketplace() {
               </button>
               <button
                 onClick={handleBook}
-                disabled={ordering}
+                disabled={ordering || !activeReservationId}
                 className="rounded-lg bg-rv-accent px-5 py-2 text-sm font-semibold text-white hover:bg-rv-accent/90 disabled:opacity-50"
               >
                 {ordering ? 'Billing…' : 'Bill to room'}

@@ -42,13 +42,17 @@ export default function Dashboard() {
   const [ratingMap, setRatingMap] = useState({});
   const [commentMap, setCommentMap] = useState({});
   const [submittingReview, setSubmittingReview] = useState(null);
+  const [reviewError, setReviewError] = useState(null);
 
   const upcoming = reservations
-    .filter((r) => r.status === 'Confirmed' || r.status === 'Pending' || r.status === 'CONFIRMED' || r.status === 'PENDING')
+    .filter((r) => {
+      const s = r.status?.toUpperCase();
+      return s === 'CONFIRMED' || s === 'PENDING';
+    })
     .slice(0, 3);
 
   const checkedOut = reservations.filter(
-    (r) => (r.status === 'CHECKED_OUT' || r.status === 'CheckedOut') && !reviewedIds.includes(r.id),
+    (r) => r.status?.toUpperCase() === 'CHECKED_OUT' && !reviewedIds.includes(r.id),
   );
 
   const displayName = user?.fullName?.split(' ')[0] ?? 'Guest';
@@ -57,11 +61,15 @@ export default function Dashboard() {
     const rating = ratingMap[res.id];
     if (!rating) return;
     setSubmittingReview(res.id);
+    setReviewError(null);
     try {
       await createReview({ reservationId: res.id, roomId: res.roomId, rating, comment: commentMap[res.id] ?? '' });
       setReviewedIds((prev) => [...prev, res.id]);
-    } catch { /* ignore */ }
-    finally { setSubmittingReview(null); }
+    } catch (err) {
+      setReviewError(err.message || 'Failed to submit review. Please try again.');
+    } finally {
+      setSubmittingReview(null);
+    }
   }
 
   return (
@@ -169,6 +177,11 @@ export default function Dashboard() {
                   placeholder="Share your experience (optional)…"
                   className="w-full rounded-lg border border-rv-border2 bg-rv-bg px-3 py-2 text-sm text-rv-text outline-none focus:ring-2 focus:ring-rv-olive-400/40 resize-none"
                 />
+                {reviewError && submittingReview !== res.id && (
+                  <p className="rounded-lg border border-rv-danger/20 bg-rv-danger-soft px-3 py-2 text-sm text-rv-danger">
+                    {reviewError}
+                  </p>
+                )}
                 <button
                   onClick={() => submitReview(res)}
                   disabled={!ratingMap[res.id] || submittingReview === res.id}

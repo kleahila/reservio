@@ -36,9 +36,12 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
-  function handleTenantChange(subdomain) {
+  function handleTenantChange(subdomain, name) {
     setTenant(subdomain);
-    if (subdomain !== '__superadmin__') localStorage.setItem('rv_tenant', subdomain);
+    if (subdomain !== '__superadmin__') {
+      localStorage.setItem('rv_tenant', subdomain);
+      if (name) localStorage.setItem('rv_tenant_name', name);
+    }
     setApiError('');
   }
 
@@ -86,7 +89,7 @@ export default function Login() {
                     <button
                       key={h.subdomain}
                       type="button"
-                      onClick={() => handleTenantChange(h.subdomain)}
+                      onClick={() => handleTenantChange(h.subdomain, h.name)}
                       className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
                         tenant === h.subdomain
                           ? 'border-rv-accent bg-rv-accent/10 text-rv-accent'

@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { mockRooms } from "../data/mockRooms";
-import { mockReservations } from "../data/mockReservations";
+import { getRooms } from "../api/rooms";
+import { getReservations } from "../api/reservations";
 
 const QUICK_ACTIONS = [
   { id: "checkin",    label: "Check in guest",          icon: "→", path: "/staff/reservations" },
@@ -60,13 +60,20 @@ function RoomPill({ status }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function CommandBar({ onClose }) {
-  const [query, setQuery]       = useState("");
-  const [active, setActive]     = useState(0);
-  const inputRef                = useRef(null);
-  const navigate                = useNavigate();
-  const q                       = query.toLowerCase().trim();
+  const [query, setQuery]           = useState("");
+  const [active, setActive]         = useState(0);
+  const [rooms, setRooms]           = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const inputRef                    = useRef(null);
+  const navigate                    = useNavigate();
+  const q                           = query.toLowerCase().trim();
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    getRooms(undefined, undefined, true).then((data) => setRooms(data || [])).catch(() => {});
+    getReservations().then((data) => setReservations(data || [])).catch(() => {});
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -77,7 +84,6 @@ export default function CommandBar({ onClose }) {
 
   // Build result list
   const results = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
     const out = [];
 
     if (!q) {
@@ -86,17 +92,20 @@ export default function CommandBar({ onClose }) {
     }
 
     // Rooms
-    mockRooms
-      .filter((r) => r.roomNumber?.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
+    rooms
+      .filter((r) => r.roomNumber?.toLowerCase().includes(q) || r.type?.toLowerCase().includes(q))
       .slice(0, 4)
       .forEach((r) => out.push({ type: "room", ...r }));
 
     // Guests (active reservations only)
-    mockReservations
-      .filter((r) => r.guestName.toLowerCase().includes(q) && r.status !== "CheckedOut")
+    reservations
+      .filter((r) => {
+        const name = (r.guest?.fullName ?? r.guestName ?? "").toLowerCase();
+        return name.includes(q) && r.status !== "CheckedOut";
+      })
       .slice(0, 4)
       .forEach((r) => {
-        const room = mockRooms.find((rm) => rm.id === r.roomId);
+        const room = rooms.find((rm) => rm.id === r.roomId);
         out.push({ type: "guest", ...r, roomNumber: room?.roomNumber });
       });
 
@@ -106,12 +115,12 @@ export default function CommandBar({ onClose }) {
       .forEach((a) => out.push({ type: "action", ...a }));
 
     return out;
-  }, [q]);
+  }, [q, rooms, reservations]);
 
   // Group results for rendering
-  const rooms   = results.filter((r) => r.type === "room");
-  const guests  = results.filter((r) => r.type === "guest");
-  const actions = results.filter((r) => r.type === "action");
+  const roomResults   = results.filter((r) => r.type === "room");
+  const guestResults  = results.filter((r) => r.type === "guest");
+  const actionResults = results.filter((r) => r.type === "action");
 
   function handleKeyDown(e) {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => Math.min(i + 1, results.length - 1)); }
@@ -126,8 +135,8 @@ export default function CommandBar({ onClose }) {
 
   // Compute per-item global index for keyboard highlight
   let idx = 0;
-  const roomStart   = idx;   idx += rooms.length;
-  const guestStart  = idx;   idx += guests.length;
+  const roomStart   = idx;   idx += roomResults.length;
+  const guestStart  = idx;   idx += guestResults.length;
   const actionStart = idx;
 
   return (
@@ -159,10 +168,10 @@ export default function CommandBar({ onClose }) {
 
         {/* Results */}
         <div className="max-h-[320px] overflow-y-auto pb-2">
-          {rooms.length > 0 && (
+          {roomResults.length > 0 && (
             <>
               <Group label="Rooms" />
-              {rooms.map((r, i) => (
+              {roomResults.map((r, i) => (
                 <Row key={r.id} active={active === roomStart + i} onClick={() => select(r)}>
                   <span className="font-mono font-bold text-rv-text text-[13px]">{r.roomNumber}</span>
                   <span className="text-rv-muted text-[12px] truncate">{r.type}</span>
@@ -172,28 +181,31 @@ export default function CommandBar({ onClose }) {
             </>
           )}
 
-          {guests.length > 0 && (
+          {guestResults.length > 0 && (
             <>
               <Group label="Guests" />
-              {guests.map((r, i) => (
-                <Row key={r.id} active={active === guestStart + i} onClick={() => select(r)}>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                       style={{ background: "rgba(58,111,115,0.12)", color: "rgb(var(--rv-sea))" }}>
-                    {r.guestName.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <span className="text-rv-text truncate">{r.guestName}</span>
-                  <span className="ml-auto text-[10px] text-rv-muted font-mono shrink-0">
-                    Rm {r.roomNumber}
-                  </span>
-                </Row>
-              ))}
+              {guestResults.map((r, i) => {
+                const guestName = r.guest?.fullName ?? r.guestName ?? "—";
+                return (
+                  <Row key={r.id} active={active === guestStart + i} onClick={() => select(r)}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                         style={{ background: "rgba(58,111,115,0.12)", color: "rgb(var(--rv-sea))" }}>
+                      {guestName.split(" ").map((n) => n[0]).join("")}
+                    </div>
+                    <span className="text-rv-text truncate">{guestName}</span>
+                    <span className="ml-auto text-[10px] text-rv-muted font-mono shrink-0">
+                      Rm {r.roomNumber}
+                    </span>
+                  </Row>
+                );
+              })}
             </>
           )}
 
-          {actions.length > 0 && (
+          {actionResults.length > 0 && (
             <>
               <Group label={q ? "Actions" : "Quick Actions"} />
-              {actions.map((a, i) => (
+              {actionResults.map((a, i) => (
                 <Row key={a.id} active={active === actionStart + i} onClick={() => select(a)}>
                   <span className="w-5 text-center text-[13px]" style={{ color: "rgb(var(--rv-accent))" }}>
                     {a.icon}

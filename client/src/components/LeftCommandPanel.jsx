@@ -1,4 +1,5 @@
-import { mockRooms } from "../data/mockRooms";
+import { useState, useEffect } from "react";
+import { getRooms } from "../api/rooms";
 
 // ── Shared section divider ────────────────────────────────────────────────────
 function SectionLabel({ children }) {
@@ -35,9 +36,10 @@ function AlertRow({ type, label, sub }) {
 }
 
 // ── Arrival card ──────────────────────────────────────────────────────────────
-function ArrivalRow({ reservation }) {
-  const room = mockRooms.find((r) => r.id === reservation.roomId);
-  const initials = reservation.guestName
+function ArrivalRow({ reservation, rooms }) {
+  const room = rooms.find((r) => r.id === reservation.roomId);
+  const guestName = reservation.guest?.fullName ?? reservation.guestName ?? "Guest";
+  const initials = guestName
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -53,7 +55,7 @@ function ArrivalRow({ reservation }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-rv-text truncate leading-snug">
-          {reservation.guestName}
+          {guestName}
         </p>
         <p className="text-[10px] text-rv-muted leading-snug">
           {room?.roomNumber ?? `Room ${reservation.roomId}`} · {reservation.guests ?? 1}{" "}
@@ -71,15 +73,15 @@ function ArrivalRow({ reservation }) {
 
 // ── Staff on-duty row ─────────────────────────────────────────────────────────
 function StaffRow({ member }) {
-  const initials = member.name.split(" ").map((n) => n[0]).join("").toUpperCase();
-  const isHK = member.role === "Housekeeper";
+  const initials = (member.fullName ?? member.name ?? "?").split(" ").map((n) => n[0]).join("").toUpperCase();
+  const isHK = member.role === "HOUSEKEEPER";
   return (
     <div className="mx-2 mb-0.5 flex items-center gap-2.5 px-3 py-2 rounded-xl">
       <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold border border-rv-border bg-rv-surface2 text-rv-muted">
         {initials}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-rv-text truncate leading-snug">{member.name}</p>
+        <p className="text-[11px] font-medium text-rv-text truncate leading-snug">{member.fullName ?? member.name}</p>
         <p className="text-[10px] text-rv-subtle leading-snug">{member.role}</p>
       </div>
       {/* Online indicator */}
@@ -94,10 +96,15 @@ function StaffRow({ member }) {
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function LeftCommandPanel({ reservations, tasks, staff }) {
   const today = new Date().toISOString().split("T")[0];
+  const [rooms, setRooms] = useState([]);
 
-  const arrivalsToday    = reservations.filter((r) => r.checkIn === today && r.status === "Confirmed");
-  const checkoutsToday   = reservations.filter((r) => r.checkOut === today && r.status === "CheckedIn");
-  const urgentTasks      = tasks.filter((t) => t.urgency === "high");
+  useEffect(() => {
+    getRooms(undefined, undefined, true).then((data) => setRooms(data || [])).catch(() => {});
+  }, []);
+
+  const arrivalsToday    = reservations.filter((r) => r.checkIn?.slice(0, 10) === today && r.status === "CONFIRMED");
+  const checkoutsToday   = reservations.filter((r) => r.checkOut?.slice(0, 10) === today && r.status === "CHECKED_IN");
+  const urgentTasks      = tasks.filter((t) => t.urgency === true);
   const hasAlerts        = checkoutsToday.length > 0 || urgentTasks.length > 0;
 
   return (
@@ -119,7 +126,7 @@ export default function LeftCommandPanel({ reservations, tasks, staff }) {
       {hasAlerts ? (
         <>
           {checkoutsToday.map((r) => (
-            <AlertRow key={`co-${r.id}`} type="checkout" label={r.guestName} sub="Check-out due today" />
+            <AlertRow key={`co-${r.id}`} type="checkout" label={r.guest?.fullName ?? r.guestName ?? "—"} sub="Check-out due today" />
           ))}
           {urgentTasks.map((t) => (
             <AlertRow key={`ut-${t.id}`} type="urgent" label={t.roomLabel} sub={t.notes || "Urgent cleaning"} />
@@ -132,7 +139,7 @@ export default function LeftCommandPanel({ reservations, tasks, staff }) {
       {/* ── Arrivals Today ──────────────────────────────────────────────── */}
       <SectionLabel>Arrivals Today</SectionLabel>
       {arrivalsToday.length > 0 ? (
-        arrivalsToday.map((r) => <ArrivalRow key={r.id} reservation={r} />)
+        arrivalsToday.map((r) => <ArrivalRow key={r.id} reservation={r} rooms={rooms} />)
       ) : (
         <p className="px-4 py-2 text-[11px] text-rv-subtle">No arrivals scheduled</p>
       )}
