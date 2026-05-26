@@ -18,7 +18,7 @@ router.get('/', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'RECEPTIONIST'
   }
 });
 
-router.put('/:id/urgent', authMiddleware, roleGuard('STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
+router.put('/:id/urgent', authMiddleware, roleGuard('HOUSEKEEPER', 'STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);
   try {
     const task = await db.housekeepingTask.update({
