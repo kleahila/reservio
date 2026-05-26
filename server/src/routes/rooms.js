@@ -132,8 +132,8 @@ async function updateRoomStatusHandler(req, res) {
 }
 router
   .route('/:id/status')
-  .put(authMiddleware, roleGuard('STAFF', 'HOTEL_ADMIN'), updateRoomStatusHandler)
-  .patch(authMiddleware, roleGuard('STAFF', 'HOTEL_ADMIN'), updateRoomStatusHandler);
+  .put(authMiddleware, roleGuard('STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), updateRoomStatusHandler)
+  .patch(authMiddleware, roleGuard('STAFF', 'RECEPTIONIST', 'MANAGER', 'HOTEL_ADMIN'), updateRoomStatusHandler);
 
 router.delete('/:id', authMiddleware, roleGuard('HOTEL_ADMIN'), async (req, res) => {
   const db = getTenantClient(req.tenant.id);

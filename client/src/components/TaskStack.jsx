@@ -209,7 +209,7 @@ export default function TaskStack({
   }
 
   const housekeepers = useMemo(
-    () => staff.filter((s) => s.role === "HOUSEKEEPER"),
+    () => staff.filter((s) => s.role === "HOUSEKEEPER" && s.active !== false),
     [staff],
   );
 
