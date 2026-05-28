@@ -222,6 +222,22 @@ async function main() {
     gtReservations.push(res);
   }
 
+  // Extra: 4 CHECKED_IN (current) + 6 CONFIRMED (upcoming) — Grand Tirana
+  console.log('Seeding Grand Tirana extra active/upcoming reservations…');
+  const gtExtraRes = await Promise.all([
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: marco.id, roomId: gtRooms[0].id, checkIn: daysAgo(2),        checkOut: daysFromToday(3),  status: 'CHECKED_IN', breakfastIncluded: true,  breakfastPrice: 15   } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: sofia.id, roomId: gtRooms[4].id, checkIn: daysAgo(1),        checkOut: daysFromToday(4),  status: 'CHECKED_IN', breakfastIncluded: false, breakfastPrice: null } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: anna.id,  roomId: gtRooms[8].id, checkIn: daysAgo(3),        checkOut: daysFromToday(2),  status: 'CHECKED_IN', breakfastIncluded: true,  breakfastPrice: 15   } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: marco.id, roomId: gtRooms[9].id, checkIn: daysAgo(1),        checkOut: daysFromToday(5),  status: 'CHECKED_IN', breakfastIncluded: false, breakfastPrice: null } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: sofia.id, roomId: gtRooms[1].id, checkIn: daysFromToday(3),  checkOut: daysFromToday(7),  status: 'CONFIRMED',  breakfastIncluded: false, breakfastPrice: null } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: anna.id,  roomId: gtRooms[2].id, checkIn: daysFromToday(5),  checkOut: daysFromToday(9),  status: 'CONFIRMED',  breakfastIncluded: true,  breakfastPrice: 15   } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: marco.id, roomId: gtRooms[5].id, checkIn: daysFromToday(7),  checkOut: daysFromToday(11), status: 'CONFIRMED',  breakfastIncluded: false, breakfastPrice: null } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: sofia.id, roomId: gtRooms[6].id, checkIn: daysFromToday(10), checkOut: daysFromToday(14), status: 'CONFIRMED',  breakfastIncluded: true,  breakfastPrice: 15   } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: anna.id,  roomId: gtRooms[3].id, checkIn: daysFromToday(14), checkOut: daysFromToday(18), status: 'CONFIRMED',  breakfastIncluded: false, breakfastPrice: null } }),
+    prisma.reservation.create({ data: { tenantId: gt.id, userId: sofia.id, roomId: gtRooms[8].id, checkIn: daysFromToday(20), checkOut: daysFromToday(24), status: 'CONFIRMED',  breakfastIncluded: false, breakfastPrice: null } }),
+  ]);
+  gtReservations.push(...gtExtraRes);
+
   // Services — Grand Tirana
   const gtServices = await Promise.all([
     prisma.service.create({ data: { tenantId: gt.id, name: 'Spa Massage',            category: 'Spa',          price: 60 } }),
